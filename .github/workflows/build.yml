@@ -1,0 +1,183 @@
+name: build
+
+# This is a reusable workflow. The GITHUB_TOKEN permissions are provided by the
+# caller's job: callers that only validate the build grant contents: read, while
+# the release grants packages: write so the images and index can be pushed.
+
+on:
+  workflow_call:
+    inputs:
+      push:
+        description: Push the per-arch images and assemble the multi-arch index.
+        required: false
+        type: boolean
+        default: false
+      version:
+        description: Release version without the leading v, used for image tags.
+        required: false
+        type: string
+        default: ''
+    outputs:
+      image:
+        description: The image repository the build pushed to.
+        value: ${{ jobs.merge.outputs.image }}
+      digest:
+        description: The digest of the pushed multi-arch index.
+        value: ${{ jobs.merge.outputs.digest }}
+
+jobs:
+  build:
+    name: build (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Resolve image
+        id: image
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+
+          echo "image=ghcr.io/${OWNER,,}/wrapscallion" >> "${GITHUB_OUTPUT}"
+
+      - name: Set package version
+        if: ${{ inputs.version != '' }}
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          # Bake the release version into the image so it matches the commit the
+          # release tag will point at. Nothing in the lock depends on it.
+          tmp=$(mktemp)
+          jq --arg v "${VERSION}" '.version = $v' deno.json > "${tmp}"
+          mv "${tmp}" deno.json
+
+      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Log in to GHCR
+        if: ${{ inputs.push }}
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build the image for ${{ matrix.platform }}
+        id: build
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          provenance: false
+          sbom: false
+          outputs: ${{ inputs.push && format('type=image,name={0},push-by-digest=true,name-canonical=true,push=true', steps.image.outputs.image) || 'type=cacheonly' }}
+
+      - name: Export digest
+        if: ${{ inputs.push }}
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p "${RUNNER_TEMP}/digests"
+          touch "${RUNNER_TEMP}/digests/${DIGEST#sha256:}"
+
+      - name: Upload digest
+        if: ${{ inputs.push }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: digests-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: merge
+    if: ${{ inputs.push }}
+    needs: build
+    runs-on: ubuntu-24.04
+    outputs:
+      image: ${{ steps.image.outputs.image }}
+      digest: ${{ steps.index.outputs.digest }}
+    steps:
+      - name: Resolve image
+        id: image
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+
+          echo "image=ghcr.io/${OWNER,,}/wrapscallion" >> "${GITHUB_OUTPUT}"
+
+      - name: Download digests
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+      - name: Compute tags
+        id: meta
+        uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6.1.0
+        with:
+          images: ${{ steps.image.outputs.image }}
+          flavor: |
+            latest=true
+            prefix=v,onlatest=false
+          tags: |
+            type=semver,pattern={{major}},value=${{ inputs.version }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ inputs.version }}
+            type=semver,pattern={{version}},value=${{ inputs.version }}
+
+      - name: Log in to GHCR
+        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Assemble and push the index
+        working-directory: ${{ runner.temp }}/digests
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+          TAGS_JSON: ${{ steps.meta.outputs.json }}
+        run: |
+          set -euo pipefail
+
+          mapfile -t tags < <(jq -r '.tags[]' <<< "${TAGS_JSON}")
+          sources=()
+          for digest in *; do
+            sources+=("${IMAGE}@sha256:${digest}")
+          done
+
+          docker buildx imagetools create \
+            "${tags[@]/#/--tag=}" \
+            "${sources[@]}"
+
+      - name: Capture index digest
+        id: index
+        env:
+          IMAGE: ${{ steps.image.outputs.image }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+
+          digest=$(docker buildx imagetools inspect "${IMAGE}:v${VERSION}" \
+            --format '{{.Manifest.Digest}}')
+          echo "digest=${digest}" >> "${GITHUB_OUTPUT}"
