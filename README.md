@@ -71,7 +71,9 @@ and `--colour` / `--no-colour` override them.
 
 Projects using [pre-commit][pre-commit] can install wrapscallion as a
 `commit-msg` hook. The default hook is Docker-backed, so consumers need Docker
-but do not need Deno or Git installed in the hook image.
+but do not need Deno or Git installed in the hook image. Each release pins this
+hook to the published image by digest, so the `rev` you pin selects the exact,
+attested image that runs.
 
 ```yaml
 repos:
@@ -120,3 +122,31 @@ Run the full local gate:
 ```sh
 deno task check
 ```
+
+## Releasing
+
+Releases are cut by the `release` workflow and use
+[GitHub immutable releases][immutable], which must be enabled once under the
+repository's Settings (Code security → Immutable releases). Once enabled, each
+published release gets a signed attestation over its tag and commit, and its tag
+is protected from being moved or deleted.
+
+To cut a release, run the `release` workflow from the Actions tab with the new
+version (for example `0.2.0`). It runs `deno task check`, then:
+
+- builds the multi-architecture Docker image and pushes it to the GitHub
+  Container Registry by digest, with a build-provenance attestation;
+- sets the package version and pins the pre-commit `wrapscallion` hook to the
+  image digest just built;
+- commits that, tags `vX.Y.Z`, and creates the immutable release.
+
+Because the pre-commit hook's digest is written into the tagged commit, a
+consumer pinning `rev: vX.Y.Z` runs exactly the image built from that tag — the
+hook is pinned to the same revision it was fetched from. The image is not part
+of its own build context, so writing the digest back does not change it.
+
+The release commit is made by `github-actions[bot]` and is not GPG-signed; if
+`main` requires signed commits, allow that actor or sign the commit in the
+workflow.
+
+[immutable]: https://docs.github.com/en/repositories/releasing-projects-on-github/about-immutable-releases
