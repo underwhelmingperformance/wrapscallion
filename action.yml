@@ -1,0 +1,61 @@
+name: wrapscallion
+description: Lint Conventional Commit messages and 72-column bodies.
+
+inputs:
+  from:
+    description: Lint commits after this revision.
+    required: false
+  to:
+    description: Lint commits up to this revision.
+    required: false
+  edit:
+    description: Lint a single commit message file.
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282 # v2.0.4
+      with:
+        deno-version-file: ${{ github.action_path }}/.dvmrc
+
+    - name: Run wrapscallion
+      shell: bash
+      env:
+        INPUT_EDIT: ${{ inputs.edit }}
+        INPUT_FROM: ${{ inputs.from }}
+        INPUT_TO: ${{ inputs.to }}
+        RANGE_BASE_SHA:
+          ${{ github.event.pull_request.base.sha ||
+          github.event.merge_group.base_sha }}
+        RANGE_HEAD_SHA:
+          ${{ github.event.pull_request.head.sha ||
+          github.event.merge_group.head_sha }}
+      run: |
+        set -euo pipefail
+
+        args=(--output-format json)
+        permissions=(
+          --allow-read
+          --allow-env
+        )
+
+        if [[ -n "$INPUT_EDIT" ]]; then
+          args+=(--edit "$INPUT_EDIT")
+        else
+          from="${INPUT_FROM:-$RANGE_BASE_SHA}"
+          to="${INPUT_TO:-$RANGE_HEAD_SHA}"
+
+          if [[ -z "$from" || -z "$to" ]]; then
+            echo 'wrapscallion requires either edit, from/to, or a pull_request/merge_group event' >&2
+            exit 2
+          fi
+
+          args+=(--from "$from" --to "$to")
+        fi
+
+        deno run \
+          --config "$GITHUB_ACTION_PATH/deno.json" \
+          "${permissions[@]}" \
+          "$GITHUB_ACTION_PATH/src/main.ts" \
+          "${args[@]}"

@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+set -eu
+
+exec deno run \
+	--config /opt/wrapscallion/deno.json \
+	--cached-only \
+	--frozen \
+	--allow-read \
+	--allow-env \
+	/opt/wrapscallion/src/main.ts \
+	"$@"

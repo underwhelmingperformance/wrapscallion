@@ -1,0 +1,24 @@
+#!/usr/bin/env sh
+set -eu
+
+hook_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+project_dir=$(dirname -- "$hook_dir")
+
+if ! command -v deno >/dev/null 2>&1; then
+	cat >&2 <<'EOF'
+wrapscallion requires Deno, but `deno` was not found on PATH.
+
+Install Deno from https://deno.com/ or use the standalone wrapscallion
+binary in environments where Deno is not available.
+EOF
+	exit 127
+fi
+
+exec deno run \
+	--config "$project_dir/deno.json" \
+	--allow-read \
+	--allow-env \
+	"$project_dir/src/main.ts" \
+	--output-format json \
+	--edit \
+	"$@"
