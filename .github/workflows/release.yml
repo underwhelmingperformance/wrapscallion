@@ -80,9 +80,8 @@ jobs:
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
 
-      - name: Pin pre-commit hook, commit, tag and release
+      - name: Pin pre-commit hook
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DIGEST: ${{ steps.build.outputs.digest }}
         run: |
           set -euo pipefail
@@ -105,17 +104,38 @@ jobs:
             '    - commit-msg' \
             > .pre-commit-hooks.yaml
 
-          deno fmt .pre-commit-hooks.yaml
+          deno fmt .pre-commit-hooks.yaml deno.json
 
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m "chore(release): v${VERSION}"
-          git tag "v${VERSION}"
-          git remote set-url origin \
-            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push origin HEAD:main
-          git push origin "v${VERSION}"
+      - name: Create signed tag and release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          # Build the release commit through the API so GitHub signs it: the tag
+          # then carries a verified signature even though it is created in CI.
+          # The commit hangs off main via the tag only; main is not moved, so it
+          # plays nicely with a protected, PR-only main branch.
+          base_sha=$(gh api "repos/${REPO}/git/ref/heads/main" --jq .object.sha)
+          base_tree=$(gh api "repos/${REPO}/git/commits/${base_sha}" --jq .tree.sha)
+          deno_blob=$(gh api "repos/${REPO}/git/blobs" \
+            -f encoding=base64 -f content="$(base64 -w0 deno.json)" --jq .sha)
+          hooks_blob=$(gh api "repos/${REPO}/git/blobs" \
+            -f encoding=base64 -f content="$(base64 -w0 .pre-commit-hooks.yaml)" --jq .sha)
+          tree_sha=$(jq -n \
+            --arg bt "$base_tree" --arg d "$deno_blob" --arg h "$hooks_blob" \
+            '{base_tree: $bt, tree: [
+              {path: "deno.json", mode: "100644", type: "blob", sha: $d},
+              {path: ".pre-commit-hooks.yaml", mode: "100644", type: "blob", sha: $h}
+            ]}' | gh api "repos/${REPO}/git/trees" --input - --jq .sha)
+          commit_sha=$(jq -n \
+            --arg m "chore(release): v${VERSION}" --arg t "$tree_sha" --arg p "$base_sha" \
+            '{message: $m, tree: $t, parents: [$p]}' \
+            | gh api "repos/${REPO}/git/commits" --input - --jq .sha)
+
+          gh api --method POST "repos/${REPO}/git/refs" \
+            -f ref="refs/tags/v${VERSION}" -f sha="$commit_sha"
 
           gh release create "v${VERSION}" \
             --verify-tag \
