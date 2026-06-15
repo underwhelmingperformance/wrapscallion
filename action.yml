@@ -40,22 +40,22 @@ runs:
           --allow-env
         )
 
-        if [[ -n "$INPUT_EDIT" ]]; then
-          args+=(--edit "$INPUT_EDIT")
+        if [[ -n "${INPUT_EDIT}" ]]; then
+          args+=(--edit "${INPUT_EDIT}")
         else
-          from="${INPUT_FROM:-$RANGE_BASE_SHA}"
-          to="${INPUT_TO:-$RANGE_HEAD_SHA}"
+          from="${INPUT_FROM:-${RANGE_BASE_SHA}}"
+          to="${INPUT_TO:-${RANGE_HEAD_SHA}}"
 
-          if [[ -z "$from" || -z "$to" ]]; then
+          if [[ -z "${from}" || -z "${to}" ]]; then
             echo 'wrapscallion requires either edit, from/to, or a pull_request/merge_group event' >&2
             exit 2
           fi
 
-          args+=(--from "$from" --to "$to")
+          args+=(--from "${from}" --to "${to}")
         fi
 
         deno run \
-          --config "$GITHUB_ACTION_PATH/deno.json" \
+          --config "${GITHUB_ACTION_PATH}/deno.json" \
           "${permissions[@]}" \
-          "$GITHUB_ACTION_PATH/src/main.ts" \
+          "${GITHUB_ACTION_PATH}/src/main.ts" \
           "${args[@]}"
