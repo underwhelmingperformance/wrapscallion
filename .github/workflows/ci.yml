@@ -28,3 +28,9 @@ jobs:
           deno-version-file: .dvmrc
 
       - run: deno task check
+
+  build:
+    name: build
+    permissions:
+      contents: read
+    uses: ./.github/workflows/build.yml
