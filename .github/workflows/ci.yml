@@ -31,6 +31,19 @@ jobs:
 
   build:
     name: build
+    if: ${{ github.event_name != 'push' }}
     permissions:
       contents: read
     uses: ./.github/workflows/build.yml
+    with:
+      push: false
+
+  build-and-publish:
+    name: build-and-publish
+    if: ${{ github.event_name == 'push' }}
+    permissions:
+      contents: read # check out the source to build the image
+      packages: write # push the branch-tagged image to GHCR on main
+    uses: ./.github/workflows/build.yml
+    with:
+      push: true
