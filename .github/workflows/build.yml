@@ -68,6 +68,44 @@ jobs:
 
       - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
 
+      # Build and load the image locally first so the smoke test runs the exact
+      # bytes we are about to push. The push step below rebuilds from the same
+      # context and hits the buildx cache, so this does not double the work.
+      - name: Build the image for ${{ matrix.platform }}
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          provenance: false
+          sbom: false
+          load: true
+          tags: wrapscallion:ci
+
+      - name: Smoke test the image
+        env:
+          IMAGE_REF: wrapscallion:ci
+        run: |
+          set -euo pipefail
+
+          # Run the freshly built image the way the pre-commit hook does. A
+          # broken entrypoint or a missing runtime dependency fails the build
+          # before the image is published.
+          work="$(mktemp -d)"
+          printf 'feat: a valid conventional commit subject\n\nA body that stays within the column limit.\n' > "${work}/good"
+          printf 'feat: subject is fine but the body is too long\n\nThis body line is deliberately far too long to fit within the seventy-two column limit that wrapscallion enforces.\n' > "${work}/bad"
+
+          docker run --rm --volume "${work}:/work:ro" "${IMAGE_REF}" \
+            --output-format json --edit /work/good
+
+          status=0
+          docker run --rm --volume "${work}:/work:ro" "${IMAGE_REF}" \
+            --output-format json --edit /work/bad || status="$?"
+
+          if [[ "${status}" -ne 1 ]]; then
+            echo "expected exit 1 for a failing commit message, got ${status}" >&2
+            exit 1
+          fi
+
       - name: Log in to GHCR
         if: ${{ inputs.push }}
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
@@ -76,15 +114,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build the image for ${{ matrix.platform }}
+      - name: Push the image for ${{ matrix.platform }}
         id: build
+        if: ${{ inputs.push }}
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: .
           platforms: ${{ matrix.platform }}
           provenance: false
           sbom: false
-          outputs: ${{ inputs.push && format('type=image,name={0},push-by-digest=true,name-canonical=true,push=true', steps.image.outputs.image) || 'type=cacheonly' }}
+          outputs: type=image,name=${{ steps.image.outputs.image }},push-by-digest=true,name-canonical=true,push=true
 
       - name: Export digest
         if: ${{ inputs.push }}

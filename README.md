@@ -31,6 +31,13 @@ Build a standalone executable:
 deno task build
 ```
 
+Each release also attaches prebuilt standalone binaries for Linux, macOS and
+Windows on the [releases page][releases], with a `SHA256SUMS` file to verify
+them. These need neither Deno nor Git installed, so they suit environments where
+the pre-commit hook cannot use Docker.
+
+[releases]: https://github.com/underwhelmingperformance/wrapscallion/releases
+
 ### Rewording
 
 Wrapscallion can rewrite the commits whose only problem is a body that needs
