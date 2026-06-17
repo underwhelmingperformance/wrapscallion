@@ -1,7 +1,11 @@
-import { Command, InvalidArgumentError, Option } from 'commander';
+import { Command, Option } from 'commander';
 
 import type { OutputPreferences } from './reporter-mode.ts';
-import type { ReporterMode, TextStream } from './reporter.ts';
+import {
+	type ReporterMode,
+	reporterModes,
+	type TextStream,
+} from './reporter.ts';
 
 export interface RangeOptions {
 	readonly dryRun: boolean;
@@ -34,18 +38,6 @@ interface CliOptions {
 	readonly to: string;
 }
 
-const outputFormats = ['terminal', 'json'] as const;
-
-function parseOutputFormat(value: string): ReporterMode {
-	if (value === 'terminal' || value === 'json') {
-		return value;
-	}
-
-	throw new InvalidArgumentError(
-		`expected one of: ${outputFormats.join(', ')}`,
-	);
-}
-
 export function parseOptions(
 	arguments_: readonly string[],
 	streams: { readonly stderr: TextStream; readonly stdout: TextStream },
@@ -55,8 +47,7 @@ export function parseOptions(
 		.description('Lint Conventional Commit messages and 72-column bodies.')
 		.addOption(
 			new Option('--output-format <format>', 'output format')
-				.choices(outputFormats)
-				.argParser(parseOutputFormat),
+				.choices(reporterModes),
 		)
 		.option('--colour', 'force ANSI colour (overrides NO_COLOR)')
 		.option('--no-colour', 'disable ANSI colour (overrides FORCE_COLOR)')

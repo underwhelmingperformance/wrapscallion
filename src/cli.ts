@@ -1,14 +1,26 @@
 import { CommanderError } from 'commander';
-import { createGit } from 'just-git';
+import { createGit, type Git } from 'just-git';
 
 import { errorEvent, errorMessage } from './cli-errors.ts';
-import { parseOptions } from './cli-options.ts';
+import {
+	type Options,
+	parseOptions,
+	type RangeOptions,
+} from './cli-options.ts';
 import { readCommitMessages } from './commit-message-source.ts';
-import { checkCommitMessages } from './linter.ts';
+import { githubAnnotations } from './github.ts';
+import { checkCommitMessages, type CommitMessageCheck } from './linter.ts';
 import { NodeFileSystem } from './node-file-system.ts';
 import { jsonReport, terminalFailureReport } from './report.ts';
 import { type OutputSettings, resolveOutput } from './reporter-mode.ts';
-import { createReporter, denoTextStream, type TextStream } from './reporter.ts';
+import {
+	type Colours,
+	createReporter,
+	denoTextStream,
+	type Reporter,
+	type ReporterMode,
+	type TextStream,
+} from './reporter.ts';
 import {
 	reportRewriteResult,
 	rewordCommitMessages,
@@ -44,72 +56,148 @@ export async function main(
 		const { colours, format } = settings;
 		const git = createGit({ cwd: root, fs: new NodeFileSystem() });
 		const reporter = createReporter({ mode: format, colours, stream: stderr });
-		const checks = await reporter.phase(
-			'Checking commit messages',
-			async (phase) => {
-				const commitMessages = await readCommitMessages(parsedOptions, git);
-				phase.fact('messages', commitMessages.length);
 
-				return checkCommitMessages(commitMessages);
-			},
-		);
+		const checks = await checkPhase(reporter, parsedOptions, git);
 		const failures = checks.filter((check) => check.failed);
 
 		if (failures.length === 0) {
-			if (format === 'json') {
-				emitJsonReport(jsonReport('ok', checks), stderr);
-			}
-
+			reportSuccess(format, checks, stderr);
 			return 0;
 		}
 
 		if (parsedOptions.kind === 'range' && parsedOptions.reword) {
-			const rewriteResult = await reporter.phase(
-				parsedOptions.dryRun
-					? 'Checking reworded commit messages'
-					: 'Rewording commit messages',
-				async (phase) => {
-					const result = await rewordCommitMessages(parsedOptions, checks, git);
-					phase.fact(
-						parsedOptions.dryRun ? 'would reword' : 'reworded',
-						rewordedMessageCount(result),
-					);
-
-					return result;
-				},
-			);
-
-			reportRewriteResult(rewriteResult, format, stderr);
+			await rewordPhase(reporter, parsedOptions, checks, git, format, stderr);
 			return 0;
 		}
 
-		if (format === 'terminal') {
-			stderr.write(
-				`${terminalFailureReport(failures, checks.length, colours)}\n`,
-			);
-		} else {
-			emitJsonReport(jsonReport('failed', checks), stderr);
-		}
-
+		reportFailures({ checks, colours, failures, format, stderr, stdout });
 		return 1;
 	} catch (error) {
-		if (error instanceof CommanderError) {
-			// Commander has already written the message and help to the stream.
-			return error.code === 'commander.helpDisplayed'
-				? 0
-				: operationalErrorExit;
-		}
-
-		const { colours, format } = settings ?? resolveOutput({}, isTerminal);
-
-		if (format === 'json') {
-			stderr.write(`${JSON.stringify(errorEvent(error))}\n`);
-		} else {
-			stderr.write(`${errorMessage(error, colours)}\n`);
-		}
-
-		return operationalErrorExit;
+		return handleError(error, settings, isTerminal, stderr);
 	}
+}
+
+/** Lints the selected commit messages, reporting progress as a single phase. */
+function checkPhase(
+	reporter: Reporter,
+	options: Options,
+	git: Git,
+): Promise<readonly CommitMessageCheck[]> {
+	return reporter.phase('Checking commit messages', async (phase) => {
+		const commitMessages = await readCommitMessages(options, git);
+		phase.fact('messages', commitMessages.length);
+
+		return checkCommitMessages(commitMessages);
+	});
+}
+
+/** Rewords the fixable commits in the range and reports what changed. */
+async function rewordPhase(
+	reporter: Reporter,
+	options: RangeOptions,
+	checks: readonly CommitMessageCheck[],
+	git: Git,
+	format: ReporterMode,
+	stderr: TextStream,
+): Promise<void> {
+	const result = await reporter.phase(
+		options.dryRun
+			? 'Checking reworded commit messages'
+			: 'Rewording commit messages',
+		async (phase) => {
+			const result = await rewordCommitMessages(options, checks, git);
+			phase.fact(
+				options.dryRun ? 'would reword' : 'reworded',
+				rewordedMessageCount(result),
+			);
+
+			return result;
+		},
+	);
+
+	reportRewriteResult(result, format, stderr);
+}
+
+/** The commits and streams needed to report a failing lint run. */
+interface FailureReport {
+	readonly checks: readonly CommitMessageCheck[];
+	readonly colours: Colours;
+	readonly failures: readonly CommitMessageCheck[];
+	readonly format: ReporterMode;
+	readonly stderr: TextStream;
+	readonly stdout: TextStream;
+}
+
+/** A clean run only reports anything in JSON mode; the others rely on the phase. */
+function reportSuccess(
+	format: ReporterMode,
+	checks: readonly CommitMessageCheck[],
+	stderr: TextStream,
+): void {
+	switch (format) {
+		case 'json':
+			emitJsonReport(jsonReport('ok', checks), stderr);
+			return;
+		case 'terminal':
+		case 'github':
+			return;
+	}
+}
+
+function reportFailures(report: FailureReport): void {
+	const { checks, colours, failures, format, stderr, stdout } = report;
+
+	switch (format) {
+		case 'json':
+			emitJsonReport(jsonReport('failed', checks), stderr);
+			return;
+		case 'terminal':
+			writeFailureReport(failures, checks.length, colours, stderr);
+			return;
+		case 'github':
+			writeFailureReport(failures, checks.length, colours, stderr);
+
+			for (const annotation of githubAnnotations(failures)) {
+				stdout.write(`${annotation}\n`);
+			}
+
+			return;
+	}
+}
+
+function handleError(
+	error: unknown,
+	settings: OutputSettings | undefined,
+	isTerminal: boolean,
+	stderr: TextStream,
+): number {
+	if (error instanceof CommanderError) {
+		// Commander has already written the message and help to the stream.
+		return error.code === 'commander.helpDisplayed' ? 0 : operationalErrorExit;
+	}
+
+	const { colours, format } = settings ?? resolveOutput({}, isTerminal);
+
+	switch (format) {
+		case 'json':
+			stderr.write(`${JSON.stringify(errorEvent(error))}\n`);
+			break;
+		case 'terminal':
+		case 'github':
+			stderr.write(`${errorMessage(error, colours)}\n`);
+			break;
+	}
+
+	return operationalErrorExit;
+}
+
+function writeFailureReport(
+	failures: readonly CommitMessageCheck[],
+	total: number,
+	colours: Colours,
+	stderr: TextStream,
+): void {
+	stderr.write(`${terminalFailureReport(failures, total, colours)}\n`);
 }
 
 function emitJsonReport(

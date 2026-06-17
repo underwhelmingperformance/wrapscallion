@@ -62,10 +62,14 @@ ref.
 ### Output
 
 By default wrapscallion writes a human-readable report with a spinner when
-stderr is a terminal, and line-delimited JSON otherwise. Force one with
-`--output-format terminal` or `--output-format json`. Colour is independent of
-the format: it follows the usual `FORCE_COLOR`/`NO_COLOR` environment variables,
-and `--colour` / `--no-colour` override them.
+stderr is a terminal, line-delimited JSON otherwise, and the `github` format
+when it detects `GITHUB_ACTIONS`. Force one with `--output-format terminal`,
+`--output-format json` or `--output-format github`. The `github` format writes
+the same readable report as `terminal` and additionally emits a GitHub Actions
+`::error` annotation for each failing commit, so failures surface on the pull
+request's checks. Colour is independent of the format: it follows the usual
+`FORCE_COLOR`/`NO_COLOR` environment variables, and `--colour` / `--no-colour`
+override them.
 
 ## Pre-Commit
 
