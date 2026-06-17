@@ -1,6 +1,6 @@
 {
 	"name": "@underwhelmingperformance/wrapscallion",
-	"version": "0.1.0",
+	"version": "0.0.3",
 	"license": "MIT",
 	"exports": {
 		".": "./src/main.ts"
@@ -37,16 +37,29 @@
 		"useTabs": true,
 		"singleQuote": true,
 		"proseWrap": "always",
-		"exclude": ["dist", "node_modules"]
+		"exclude": [
+			"dist",
+			"node_modules"
+		]
 	},
 	"lint": {
-		"exclude": ["dist", "node_modules"],
+		"exclude": [
+			"dist",
+			"node_modules"
+		],
 		"rules": {
-			"tags": ["recommended"]
+			"tags": [
+				"recommended"
+			]
 		}
 	},
 	"compilerOptions": {
-		"lib": ["ES2023", "DOM", "DOM.Iterable", "deno.ns"],
+		"lib": [
+			"ES2023",
+			"DOM",
+			"DOM.Iterable",
+			"deno.ns"
+		],
 		"strict": true,
 		"noUncheckedIndexedAccess": true
 	}
