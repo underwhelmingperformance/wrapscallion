@@ -138,12 +138,13 @@ jobs:
         with:
           images: ${{ steps.image.outputs.image }}
           flavor: |
-            latest=true
+            latest=${{ inputs.version != '' }}
             prefix=v,onlatest=false
           tags: |
             type=semver,pattern={{major}},value=${{ inputs.version }}
             type=semver,pattern={{major}}.{{minor}},value=${{ inputs.version }}
             type=semver,pattern={{version}},value=${{ inputs.version }}
+            type=ref,event=branch,enable=${{ inputs.version == '' }},prefix=
 
       - name: Log in to GHCR
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
@@ -172,6 +173,7 @@ jobs:
 
       - name: Capture index digest
         id: index
+        if: ${{ inputs.version != '' }}
         env:
           IMAGE: ${{ steps.image.outputs.image }}
           VERSION: ${{ inputs.version }}
