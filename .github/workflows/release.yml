@@ -62,6 +62,7 @@ jobs:
       packages: write # attach the provenance attestation to the image
       id-token: write # OIDC for build provenance attestation
       attestations: write # write the build provenance attestation
+      artifact-metadata: write # link the pushed image on the org's artifacts page
     env:
       VERSION: ${{ inputs.version }}
       IMAGE: ${{ needs.build.outputs.image }}
