@@ -114,6 +114,41 @@ jobs:
 
           deno fmt .pre-commit-hooks.yaml deno.json
 
+      - name: Compile standalone binaries
+        run: |
+          set -euo pipefail
+
+          mkdir -p dist
+
+          for target in \
+            x86_64-unknown-linux-gnu \
+            aarch64-unknown-linux-gnu \
+            x86_64-pc-windows-msvc \
+            x86_64-apple-darwin \
+            aarch64-apple-darwin; do
+            output="dist/wrapscallion-${VERSION}-${target}"
+
+            if [[ "${target}" == *windows* ]]; then
+              output="${output}.exe"
+            fi
+
+            deno compile \
+              --frozen \
+              --allow-read \
+              --allow-write \
+              --allow-env \
+              --target "${target}" \
+              --output "${output}" \
+              src/main.ts
+          done
+
+          (cd dist && sha256sum wrapscallion-* > SHA256SUMS)
+
+      - name: Attest the standalone binaries
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-path: dist/wrapscallion-*
+
       - name: Create signed tag and draft release
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
@@ -176,3 +211,12 @@ jobs:
               draft: true,
               generate_release_notes: true,
             });
+
+      - name: Attach the standalone binaries to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          gh release upload "v${VERSION}" dist/wrapscallion-* dist/SHA256SUMS --clobber
