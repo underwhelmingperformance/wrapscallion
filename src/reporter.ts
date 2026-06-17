@@ -1,8 +1,15 @@
 import { Spinner } from '@std/cli/unstable-spinner';
 import pc from 'picocolors';
 
-/** Terminal (spinner) or line-delimited JSON output. */
-export type ReporterMode = 'terminal' | 'json';
+/**
+ * The output formats wrapscallion can produce: a terminal report (with a
+ * spinner when animated), line-delimited JSON, or the GitHub Actions format,
+ * which pairs the terminal report with `::error` annotations.
+ */
+export const reporterModes = ['terminal', 'json', 'github'] as const;
+
+/** One of the {@link reporterModes}. */
+export type ReporterMode = (typeof reporterModes)[number];
 
 /** A picocolors instance whose colouring has already been resolved. */
 export type Colours = ReturnType<typeof pc.createColors>;
@@ -39,13 +46,13 @@ const textEncoder = new TextEncoder();
 export function createReporter(options: ReporterOptions): Reporter {
 	const stream = options.stream ?? denoTextStream(Deno.stderr);
 
-	return options.mode === 'terminal'
-		? createTerminalReporter(
+	return options.mode === 'json'
+		? createJsonReporter(stream)
+		: createTerminalReporter(
 			stream,
 			options.stream === undefined,
 			options.colours,
-		)
-		: createJsonReporter(stream);
+		);
 }
 
 function createTerminalReporter(

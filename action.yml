@@ -34,7 +34,7 @@ runs:
       run: |
         set -euo pipefail
 
-        args=(--output-format json)
+        args=(--output-format github)
         permissions=(
           --allow-read
           --allow-env

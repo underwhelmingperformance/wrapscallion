@@ -17,7 +17,8 @@ Deno.test(
 				'Lint Conventional Commit messages and 72-column bodies.',
 				'',
 				'Options:',
-				'  --output-format <format>  output format (choices: "terminal", "json")',
+				'  --output-format <format>  output format (choices: "terminal", "json",',
+				'                            "github")',
 				'  --colour                  force ANSI colour (overrides NO_COLOR)',
 				'  --no-colour               disable ANSI colour (overrides FORCE_COLOR)',
 				'  --dry-run                 show what --reword would change without moving refs',
@@ -93,6 +94,52 @@ Deno.test(
 	},
 );
 
+Deno.test(
+	'wrapscallion emits GitHub annotations and a readable report in github mode',
+	async () => {
+		const directory = await Deno.makeTempDir({
+			prefix: 'wrapscallion-github-',
+		});
+
+		try {
+			const messageFile = `${directory}/COMMIT_EDITMSG`;
+			await Deno.writeTextFile(messageFile, 'not conventional\n');
+			const result = await runCli([
+				'--edit',
+				messageFile,
+				'--output-format',
+				'github',
+				'--no-colour',
+			]);
+
+			assertEquals({
+				code: result.code,
+				stderr: normaliseDurations(result.stderr),
+				stdout: result.stdout,
+			}, {
+				code: 1,
+				stderr: [
+					'ok Checking commit messages · messages 1 (TIME)',
+					'Wrapscallion failed for 1 commit message out of 1.',
+					'',
+					`${messageFile} not conventional`,
+					'  x subject-empty: subject may not be empty',
+					'  x type-empty: type may not be empty',
+					'',
+				].join('\n'),
+				stdout: [
+					`::error title=${messageFile} not conventional::` +
+					'subject-empty: subject may not be empty%0A' +
+					'type-empty: type may not be empty',
+					'',
+				].join('\n'),
+			});
+		} finally {
+			await Deno.remove(directory, { recursive: true });
+		}
+	},
+);
+
 Deno.test('hasTrackedChanges ignores untracked-only and empty status', () => {
 	const statuses = [
 		'',
@@ -149,6 +196,10 @@ class MemoryTextStream {
 	toString(): string {
 		return this.#chunks.join('');
 	}
+}
+
+function normaliseDurations(value: string): string {
+	return value.replaceAll(/\(\d[\d.]*m?s\)/g, '(TIME)');
 }
 
 function parseJsonLines(value: string): readonly unknown[] {
