@@ -1,11 +1,10 @@
 - id: wrapscallion
   name: wrapscallion
   description: Lint Conventional Commit messages and 72-column bodies.
-  entry: wrapscallion --output-format json --edit
-  language: docker
+  entry: ghcr.io/underwhelmingperformance/wrapscallion@sha256:e59dec98eba9ea2fa8763a7666440cba0f0422178830cd80896b4934ef00b9b6 --output-format json --edit
+  language: docker_image
   stages:
     - commit-msg
-
 - id: wrapscallion-system
   name: wrapscallion (system Deno)
   description: Lint Conventional Commit messages using deno from PATH.
