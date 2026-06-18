@@ -129,7 +129,7 @@ attested image that runs.
 ```yaml
 repos:
   - repo: https://github.com/underwhelmingperformance/wrapscallion
-    rev: v0.0.3
+    rev: v0.1.0
     hooks:
       - id: wrapscallion
 ```
@@ -167,7 +167,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: underwhelmingperformance/wrapscallion@v0.0.3
+      - uses: underwhelmingperformance/wrapscallion@v0.1.0
 ```
 
 <!-- x-release-please-end -->
