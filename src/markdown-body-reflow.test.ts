@@ -301,20 +301,59 @@ Deno.test(
 			changed: true,
 			original: body,
 			reflowed: [
-				"The R2 step consults the tenant Worker's secret names (values are write-",
-				'only and cannot be read back): when the pair is present and the bucket',
-				"name unchanged, it is kept without prompting or probing, and the plan's",
-				'Secrets row shows it as already set. When the bucket was renamed during',
-				'the review, the kept key may be scoped to the old name, so the settle',
-				'menu reappears with the fix in it: create a key scoped to the new bucket',
-				'(recommended), enter a pair, or keep the current key as an explicit',
-				'choice. The settle outcome is a sum type (settled, keep, cancelled)',
-				'rather than an optional pair.',
+				"The R2 step consults the tenant Worker's secret names (values are",
+				'write-only and cannot be read back): when the pair is present and the',
+				'bucket name unchanged, it is kept without prompting or probing, and the',
+				"plan's Secrets row shows it as already set. When the bucket was renamed",
+				'during the review, the kept key may be scoped to the old name, so the',
+				'settle menu reappears with the fix in it: create a key scoped to the new',
+				'bucket (recommended), enter a pair, or keep the current key as an',
+				'explicit choice. The settle outcome is a sum type (settled, keep,',
+				'cancelled) rather than an optional pair.',
 				'',
 			].join('\n'),
 		});
 	},
 );
+
+for (
+	const { word, reflowed } of [
+		{
+			word: 'well-established',
+			reflowed: [
+				'Prefix word word word word word word word word word word the',
+				'well-established naming convention stays whole across the wrap boundary',
+				'here today.',
+				'',
+			],
+		},
+		{
+			word: 'production/staging',
+			reflowed: [
+				'Prefix word word word word word word word word word word the',
+				'production/staging naming convention stays whole across the wrap',
+				'boundary here today.',
+				'',
+			],
+		},
+	]
+) {
+	Deno.test(
+		`MarkdownBodyReflower keeps the compound word "${word}" on one line`,
+		() => {
+			const body = [
+				`Prefix word word word word word word word word word word the ${word} naming convention stays whole across the wrap boundary here today.`,
+				'',
+			].join('\n');
+
+			assertEquals(reflowSummary(reflower.reflow(body)), {
+				changed: true,
+				original: body,
+				reflowed: reflowed.join('\n'),
+			});
+		},
+	);
+}
 
 Deno.test('MarkdownBodyReflower uses display width for wide characters', () => {
 	const body = [

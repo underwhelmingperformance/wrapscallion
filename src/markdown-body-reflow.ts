@@ -22,14 +22,27 @@ const prefixTokenTypes = new Set([
 	'listItemIndent',
 	'linePrefix',
 ]);
+// Spans the reflower must keep on one line: Markdown inline constructs whose
+// internal whitespace is significant, and word-joining punctuation that UAX #14
+// would otherwise treat as a break opportunity. Each is swapped for a
+// width-stable placeholder before wrapping and restored afterwards.
 const inlineTokenPatterns = [
+	// Double-backtick code span, e.g. ``a `b` c``.
 	/``[\s\S]*?``/gu,
+	// Single-backtick code span, e.g. `value`.
 	/`[^`\n]+?`/gu,
+	// Inline link or image, e.g. [text](https://example.com) or ![alt](img.png).
 	/!?\[[^\]\n]*?\]\([^)\n]*?\)/gu,
+	// Full reference link or image, e.g. [text][ref].
 	/!?\[[^\]\n]*?\]\[[^\]\n]*?\]/gu,
+	// Collapsed reference link or image, e.g. [text][].
 	/!?\[[^\]\n]*?\]\[\]/gu,
+	// Autolink, e.g. <https://example.com> or <mailto:user@example.com>.
 	/<(?:https?:\/\/|mailto:)[^>\s]+>/gu,
+	// Bare URL, e.g. https://example.com/path.
 	/\b[a-z][a-z0-9+.-]{1,15}:\/\/\S+/giu,
+	// Word-joining hyphen or slash, e.g. well-established or read/write.
+	/(?<=\w)[-/](?=\w)/gu,
 ];
 
 /** Result of reflowing a Markdown commit-message body. */
