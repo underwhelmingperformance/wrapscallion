@@ -11,6 +11,12 @@ inputs:
   edit:
     description: Lint a single commit message file.
     required: false
+  ignore:
+    description: |
+      Skip commits whose subject matches a regular expression, one pattern per
+      line. Like the other inputs, this overrides the ignore patterns in the
+      repository's .wrapscallion.toml rather than adding to them.
+    required: false
 
 runs:
   using: composite
@@ -24,6 +30,7 @@ runs:
       env:
         INPUT_EDIT: ${{ inputs.edit }}
         INPUT_FROM: ${{ inputs.from }}
+        INPUT_IGNORE: ${{ inputs.ignore }}
         INPUT_TO: ${{ inputs.to }}
         RANGE_BASE_SHA:
           ${{ github.event.pull_request.base.sha ||
@@ -53,6 +60,10 @@ runs:
 
           args+=(--from "${from}" --to "${to}")
         fi
+
+        while IFS= read -r pattern; do
+          [[ -n "${pattern}" ]] && args+=(--ignore "${pattern}")
+        done <<< "${INPUT_IGNORE}"
 
         deno run \
           --config "${GITHUB_ACTION_PATH}/deno.json" \

@@ -48,6 +48,18 @@ export interface BodyFormatFinding {
 /** A single lint finding for a commit message. */
 export type Finding = BodyFormatFinding | RuleFinding;
 
+/** The mutually exclusive outcomes of checking one commit message. */
+export const commitMessageCheckStatuses = [
+	'passed',
+	'skipped',
+	'fixable',
+	'failed',
+] as const;
+
+/** One of the {@link commitMessageCheckStatuses}. */
+export type CommitMessageCheckStatus =
+	(typeof commitMessageCheckStatuses)[number];
+
 /** Base class for expected commit-message check errors. */
 export abstract class CommitMessageCheckError extends Error {
 	protected constructor(message: string) {
@@ -82,7 +94,25 @@ export class CommitMessageCheck<M extends CommitMessage = CommitMessage> {
 		public readonly originalMessage: string,
 		public readonly fixedMessage: string,
 		public readonly findings: readonly Finding[],
+		public readonly skipped: boolean = false,
 	) {}
+
+	/**
+	 * Builds the result for a commit the caller chose to skip. It carries no
+	 * findings and leaves the message untouched, so it neither fails the run nor
+	 * is reworded, but it stays in the sequence to keep history linear.
+	 */
+	static skip<M extends CommitMessage>(
+		commitMessage: M,
+	): CommitMessageCheck<M> {
+		return new CommitMessageCheck(
+			commitMessage,
+			commitMessage.message,
+			commitMessage.message,
+			[],
+			true,
+		);
+	}
 
 	get changed(): boolean {
 		return this.fixedMessage !== this.originalMessage;
@@ -101,10 +131,14 @@ export class CommitMessageCheck<M extends CommitMessage = CommitMessage> {
 	}
 
 	get passed(): boolean {
-		return !this.failed;
+		return !this.skipped && !this.failed;
 	}
 
-	get status(): 'failed' | 'fixable' | 'passed' {
+	get status(): CommitMessageCheckStatus {
+		if (this.skipped) {
+			return 'skipped';
+		}
+
 		if (this.passed) {
 			return 'passed';
 		}
@@ -161,17 +195,30 @@ const conventionalCommitRules: CommitlintRules = {
 const conventionalCommitParserOptions: CommitlintParserOptions =
 	conventionalCommitsPreset().parser;
 
+/** Decides which commits to skip, based on their subject. */
+export interface CommitSubjectFilter {
+	matches(subject: string): boolean;
+}
+
+const ignoreNothing: CommitSubjectFilter = { matches: () => false };
+
 /**
  * Lints each commit message independently, preserving a separate report per
  * commit so multi-commit pull requests show each failing commit clearly.
+ * Commits whose subject matches {@link ignore} are skipped rather than linted.
  */
 export function checkCommitMessages<M extends CommitMessage>(
 	commitMessages: readonly M[],
+	ignore: CommitSubjectFilter = ignoreNothing,
 ): Promise<readonly CommitMessageCheck<M>[]> {
 	const reflower = new MarkdownBodyReflower();
 
 	return Promise.all(
 		commitMessages.map(async (commitMessage) => {
+			if (ignore.matches(commitMessage.subject)) {
+				return CommitMessageCheck.skip(commitMessage);
+			}
+
 			const bodyCheck = await checkMarkdownBody(commitMessage, reflower);
 
 			return new CommitMessageCheck(

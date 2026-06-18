@@ -37,6 +37,58 @@ Deno.test('checkCommitMessages accepts a conventional commit with no body', asyn
 });
 
 Deno.test(
+	'checkCommitMessages skips commits whose subject the filter matches',
+	async () => {
+		const reports = await checkCommitMessages(
+			[
+				commitMessage('111111111111', 'chore(main): release 1.2.3'),
+				commitMessage('222222222222', 'not conventional'),
+			],
+			{ matches: (subject) => subject.startsWith('chore(main): release ') },
+		);
+
+		assertEquals(
+			reports.map((report) => ({
+				changed: report.changed,
+				findings: report.findings,
+				label: report.commitMessage.label,
+				skipped: report.skipped,
+				status: report.status,
+			})),
+			[
+				{
+					changed: false,
+					findings: [],
+					label: '111111111111',
+					skipped: true,
+					status: 'skipped',
+				},
+				{
+					changed: false,
+					findings: [
+						{
+							kind: 'rule',
+							fixable: false,
+							message: 'subject-empty: subject may not be empty',
+							rule: 'subject-empty',
+						},
+						{
+							kind: 'rule',
+							fixable: false,
+							message: 'type-empty: type may not be empty',
+							rule: 'type-empty',
+						},
+					],
+					label: '222222222222',
+					skipped: false,
+					status: 'failed',
+				},
+			],
+		);
+	},
+);
+
+Deno.test(
 	'checkCommitMessages throws a concrete error when a passed check is reworded',
 	async () => {
 		await assertRejects(
@@ -633,8 +685,37 @@ Deno.test('jsonReport emits only failing commits in the machine-readable report'
 					subject: 'not conventional',
 				},
 			],
+			skipped: [],
 			status: 'failed',
 			total: 2,
+		},
+	);
+});
+
+Deno.test('jsonReport lists skipped commits separately and excludes them from the total', () => {
+	assertEquals(
+		jsonReport('ok', [
+			CommitMessageCheck.skip(
+				commitMessage('111111111111', 'chore(main): release 1.2.3'),
+			),
+			new CommitMessageCheck(
+				commitMessage('222222222222', 'feat: add cache check'),
+				'feat: add cache check',
+				'feat: add cache check',
+				[],
+			),
+		]),
+		{
+			event: 'wrapscallion',
+			failures: [],
+			skipped: [
+				{
+					commit: '111111111111',
+					subject: 'chore(main): release 1.2.3',
+				},
+			],
+			status: 'ok',
+			total: 1,
 		},
 	);
 });

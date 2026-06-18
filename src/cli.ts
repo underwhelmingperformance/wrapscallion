@@ -8,7 +8,13 @@ import {
 	type RangeOptions,
 } from './cli-options.ts';
 import { readCommitMessages } from './commit-message-source.ts';
+import {
+	type ConfigFileReader,
+	DenoConfigFileReader,
+	loadConfigFile,
+} from './config-file.ts';
 import { githubAnnotations } from './github.ts';
+import { IgnoreMatcher } from './ignore-matcher.ts';
 import { checkCommitMessages, type CommitMessageCheck } from './linter.ts';
 import { NodeFileSystem } from './node-file-system.ts';
 import { jsonReport, terminalFailureReport } from './report.ts';
@@ -33,6 +39,7 @@ const root = Deno.cwd();
 const operationalErrorExit = 2;
 
 export interface MainOptions {
+	readonly configReader?: ConfigFileReader;
 	readonly stderr?: TextStream;
 	readonly stdout?: TextStream;
 }
@@ -48,16 +55,26 @@ export async function main(
 	let settings: OutputSettings | undefined;
 
 	try {
-		const { options: parsedOptions, output } = parseOptions(arguments_, {
-			stderr,
-			stdout,
-		});
+		const config = await loadConfigFile(
+			root,
+			options.configReader ?? new DenoConfigFileReader(),
+		);
+		const { ignore, options: parsedOptions, output } = parseOptions(
+			arguments_,
+			{ stderr, stdout },
+			config,
+		);
 		settings = resolveOutput(output, isTerminal);
 		const { colours, format } = settings;
 		const git = createGit({ cwd: root, fs: new NodeFileSystem() });
 		const reporter = createReporter({ mode: format, colours, stream: stderr });
 
-		const checks = await checkPhase(reporter, parsedOptions, git);
+		const checks = await checkPhase(
+			reporter,
+			parsedOptions,
+			git,
+			IgnoreMatcher.compile(ignore),
+		);
 		const failures = checks.filter((check) => check.failed);
 
 		if (failures.length === 0) {
@@ -82,12 +99,20 @@ function checkPhase(
 	reporter: Reporter,
 	options: Options,
 	git: Git,
+	ignore: IgnoreMatcher,
 ): Promise<readonly CommitMessageCheck[]> {
 	return reporter.phase('Checking commit messages', async (phase) => {
 		const commitMessages = await readCommitMessages(options, git);
 		phase.fact('messages', commitMessages.length);
 
-		return checkCommitMessages(commitMessages);
+		const checks = await checkCommitMessages(commitMessages, ignore);
+		const skipped = checks.filter((check) => check.skipped).length;
+
+		if (skipped > 0) {
+			phase.fact('skipped', skipped);
+		}
+
+		return checks;
 	});
 }
 
@@ -146,16 +171,18 @@ function reportSuccess(
 
 function reportFailures(report: FailureReport): void {
 	const { checks, colours, failures, format, stderr, stdout } = report;
+	const skipped = checks.filter((check) => check.skipped).length;
+	const considered = checks.length - skipped;
 
 	switch (format) {
 		case 'json':
 			emitJsonReport(jsonReport('failed', checks), stderr);
 			return;
 		case 'terminal':
-			writeFailureReport(failures, checks.length, colours, stderr);
+			writeFailureReport(failures, considered, colours, stderr, skipped);
 			return;
 		case 'github':
-			writeFailureReport(failures, checks.length, colours, stderr);
+			writeFailureReport(failures, considered, colours, stderr, skipped);
 
 			for (const annotation of githubAnnotations(failures)) {
 				stdout.write(`${annotation}\n`);
@@ -196,8 +223,11 @@ function writeFailureReport(
 	total: number,
 	colours: Colours,
 	stderr: TextStream,
+	skipped: number,
 ): void {
-	stderr.write(`${terminalFailureReport(failures, total, colours)}\n`);
+	stderr.write(
+		`${terminalFailureReport(failures, total, colours, skipped)}\n`,
+	);
 }
 
 function emitJsonReport(
