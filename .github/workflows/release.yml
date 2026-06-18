@@ -1,12 +1,18 @@
 name: release
 
+# Cutting a release is a two-stage flow. release-please keeps a "release"
+# pull request up to date that bumps the version in deno.json and the pinned
+# examples in the README. Merging that pull request is what triggers this
+# workflow: it builds and publishes the image, then hangs the vX.Y.Z tag off a
+# child commit that pins the pre-commit hook to the freshly published digest.
+# That digest is only known after the build, so it cannot live in the merged
+# commit; main therefore advances through the normal protected pull request and
+# the tag carries the release-only changes.
+
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: Release version without the leading v, e.g. 0.2.0
-        required: true
-        type: string
+  pull_request:
+    types:
+      - closed
 
 permissions: {}
 
@@ -15,61 +21,77 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  check:
-    name: check
+  prepare:
+    name: prepare
+    # Only the merged release-please pull request reaches the rest of the flow.
+    # release-please labels it "autorelease: pending"; an ordinary merge has no
+    # such label and is ignored.
+    if: >-
+      github.event.pull_request.merged == true &&
+      contains(github.event.pull_request.labels.*.name, 'autorelease: pending')
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-    env:
-      VERSION: ${{ inputs.version }}
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      sha: ${{ steps.version.outputs.sha }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
           persist-credentials: false
 
-      - name: Validate version
+      - name: Read the released version
+        id: version
+        env:
+          SHA: ${{ github.event.pull_request.merge_commit_sha }}
         run: |
           set -euo pipefail
 
-          if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "version must be MAJOR.MINOR.PATCH (no leading v), got: ${VERSION}" >&2
+          version=$(jq -r '."."' .release-please-manifest.json)
+
+          if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "manifest version must be MAJOR.MINOR.PATCH, got: ${version}" >&2
             exit 1
           fi
 
-      - uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282 # v2.0.4
-        with:
-          deno-version-file: .dvmrc
-
-      - run: deno task check
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "sha=${SHA}" >> "${GITHUB_OUTPUT}"
 
   build:
     name: build
-    needs: check
+    needs: prepare
     permissions:
       contents: read # check out the source to build the image
       packages: write # push the per-arch images and index to GHCR
     uses: ./.github/workflows/build.yml
     with:
       push: true
-      version: ${{ inputs.version }}
+      version: ${{ needs.prepare.outputs.version }}
+      ref: ${{ needs.prepare.outputs.sha }}
 
   release:
     name: release
-    needs: build
+    needs: [prepare, build]
     runs-on: ubuntu-24.04
     permissions:
-      contents: write # push the release commit + tag and create the release
+      contents: write # create the tag (off main) and the release
       packages: write # attach the provenance attestation to the image
       id-token: write # OIDC for build provenance attestation
       attestations: write # write the build provenance attestation
       artifact-metadata: write # link the pushed image on the org's artifacts page
+      issues: write # ensure the autorelease label exists
+      pull-requests: write # mark the release pull request as tagged
     env:
-      VERSION: ${{ inputs.version }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+      BASE_SHA: ${{ needs.prepare.outputs.sha }}
       IMAGE: ${{ needs.build.outputs.image }}
       DIGEST: ${{ needs.build.outputs.digest }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
+          ref: ${{ needs.prepare.outputs.sha }}
           persist-credentials: false
 
       # push-to-registry attaches the attestation to the image in GHCR, which
@@ -91,14 +113,6 @@ jobs:
         with:
           deno-version-file: .dvmrc
 
-      - name: Set package version
-        run: |
-          set -euo pipefail
-
-          jq --arg v "${VERSION}" '.version = $v' deno.json > deno.json.tmp
-          mv deno.json.tmp deno.json
-          deno fmt deno.json
-
       - name: Pin the pre-commit hook to the released image
         run: |
           set -euo pipefail
@@ -106,6 +120,9 @@ jobs:
           # The committed manifest builds the hook image from the Dockerfile so
           # it works on any checkout. A release instead pins the published,
           # attested image by digest, so patch only the two fields that differ.
+          # The version already landed on main through the release pull request;
+          # this digest is the only release-only change, so it is all the tag
+          # commit carries on top of the merged commit.
           yq --inplace '
             (.[] | select(.id == "wrapscallion")) |= (
               .language = "docker_image" |
@@ -113,7 +130,7 @@ jobs:
             )
           ' .pre-commit-hooks.yaml
 
-          deno fmt .pre-commit-hooks.yaml deno.json
+          deno fmt .pre-commit-hooks.yaml
 
       - name: Compile standalone binaries
         run: |
@@ -160,11 +177,11 @@ jobs:
 
             // Build the release commit through the API so GitHub signs it: the
             // tag then carries a verified signature even though it is created in
-            // CI. Parent it on the exact commit this run was triggered at, which
-            // is the tree checkout fetched and the checks validated. The tag
-            // hangs off that commit and main stays where it is, so this plays
-            // nicely with a protected, PR-only main branch.
-            const baseSha = context.sha;
+            // CI. Parent it on the merged release commit, which already carries
+            // the version bump. The tag hangs off that commit with only the
+            // pinned digest added, and main is left where the merge put it, so
+            // this plays nicely with a protected, PR-only main branch.
+            const baseSha = process.env.BASE_SHA;
             const baseCommit = await github.rest.git.getCommit({
               owner,
               repo,
@@ -184,7 +201,6 @@ jobs:
               repo,
               base_tree: baseCommit.data.tree.sha,
               tree: [
-                { path: "deno.json", mode: "100644", type: "blob", sha: await blob("deno.json") },
                 { path: ".pre-commit-hooks.yaml", mode: "100644", type: "blob", sha: await blob(".pre-commit-hooks.yaml") },
               ],
             });
@@ -221,3 +237,19 @@ jobs:
           set -euo pipefail
 
           gh release upload "v${VERSION}" dist/wrapscallion-* dist/SHA256SUMS --clobber
+
+      # release-please tracks state through the pull request label. Because the
+      # release was tagged here rather than by release-please, flip the label
+      # ourselves; otherwise the next run aborts with "untagged, merged release
+      # PRs outstanding" and stops opening new release pull requests.
+      - name: Mark the release pull request as tagged
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          gh label create 'autorelease: tagged' --color ededed --force
+          gh pr edit "${PR_NUMBER}" \
+            --remove-label 'autorelease: pending' \
+            --add-label 'autorelease: tagged'
