@@ -51,6 +51,21 @@ export class RevisionNotFoundError extends CommitMessageCliError {
 	}
 }
 
+export class InvalidIgnorePatternError extends CommitMessageCliError {
+	constructor(public readonly pattern: string, reason: unknown) {
+		const detail = reason instanceof Error ? reason.message : String(reason);
+		super(`invalid ignore pattern ${JSON.stringify(pattern)}: ${detail}`);
+		this.name = 'InvalidIgnorePatternError';
+	}
+}
+
+export class ConfigFileError extends CommitMessageCliError {
+	constructor(public readonly path: string, message: string) {
+		super(`${path}: ${message}`);
+		this.name = 'ConfigFileError';
+	}
+}
+
 export class UnbornHeadError extends CommitMessageCliError {
 	constructor() {
 		super('cannot reword commit messages on an unborn HEAD');

@@ -389,6 +389,76 @@ Deno.test('CommitMessageRewriter reports a dropped signature', async () => {
 	]);
 });
 
+Deno.test(
+	'CommitMessageRewriter preserves a skipped commit between reworded history',
+	async () => {
+		const server = createServer({ storage: new MemoryStorage() });
+		await server.createRepo('test');
+		const { hash: base } = await server.commit('test', {
+			author,
+			branch: 'main',
+			files: { 'base.txt': 'base\n' },
+			message: 'chore: add base',
+		});
+		const { hash: release } = await server.commit('test', {
+			author,
+			branch: 'main',
+			files: { 'release.txt': 'release\n' },
+			message: 'chore(main): release 1.2.3',
+		});
+		const { hash: wrap } = await server.commit('test', {
+			author,
+			branch: 'main',
+			files: { 'wrap.txt': 'wrap\n' },
+			message: [
+				'fix: explain body wrapping',
+				'',
+				'This body line is deliberately longer than seventy two columns so the commit-message checker can wrap it.',
+			].join('\n'),
+		});
+		const repo = await server.requireRepo('test');
+		const messages = await Promise.all(
+			[release, wrap].map(async (hash) => {
+				const commit = await readCommit(repo, hash);
+				return commitMessage(hash, commit.message);
+			}),
+		);
+		const checks = await checkCommitMessages(messages, {
+			matches: (subject) => subject.startsWith('chore(main): release '),
+		});
+
+		const result = await new CommitMessageRewriter({
+			backupRef: 'refs/backup/wrapscallion/test',
+			baseHash: base,
+			branchRef: 'refs/heads/main',
+			expectedHeadHash: wrap,
+			repo,
+		}).reword(checks);
+
+		const newWrap = await readCommit(repo, result.newHead);
+
+		assertEquals({
+			outcome: result.outcome,
+			rewritten: result.rewritten.map((commit) => ({
+				messageChanged: commit.messageChanged,
+				oldHash: commit.oldHash,
+				subject: commit.subject,
+			})),
+			newWrapParents: newWrap.parents,
+		}, {
+			outcome: 'applied',
+			rewritten: [
+				{
+					messageChanged: true,
+					oldHash: wrap,
+					subject: 'fix: explain body wrapping',
+				},
+			],
+			newWrapParents: [release],
+		});
+	},
+);
+
 /** Re-emits a commit object with a `gpgsig` header, as a signed commit has. */
 async function signCommit(
 	repo: Awaited<ReturnType<ReturnType<typeof createServer>['requireRepo']>>,

@@ -3,7 +3,10 @@
   "specifiers": {
     "jsr:@std/assert@1.0.19": "1.0.19",
     "jsr:@std/cli@1.0.30": "1.0.30",
+    "jsr:@std/collections@^1.1.3": "1.2.0",
     "jsr:@std/internal@^1.0.12": "1.0.14",
+    "jsr:@std/toml@1": "1.0.11",
+    "jsr:@std/toml@1.0.11": "1.0.11",
     "npm:@commitlint/config-conventional@21.0.2": "21.0.2",
     "npm:@commitlint/lint@21.0.2": "21.0.2",
     "npm:@cto.af/linewrap@4.0.1": "4.0.1",
@@ -15,7 +18,9 @@
     "npm:markdownlint@0.40.0": "0.40.0",
     "npm:micromark-extension-gfm@3.0.0": "3.0.0",
     "npm:micromark@4.0.2": "4.0.2",
-    "npm:picocolors@1.1.1": "1.1.1"
+    "npm:picocolors@1.1.1": "1.1.1",
+    "npm:re2js@0.4.3": "0.4.3",
+    "npm:re2js@2.8.3": "2.8.3"
   },
   "jsr": {
     "@std/assert@1.0.19": {
@@ -27,8 +32,17 @@
     "@std/cli@1.0.30": {
       "integrity": "769446536522d0417d7127ebcabcafac1ab0ce6766d0eb3fca1d36326fe98d13"
     },
+    "@std/collections@1.2.0": {
+      "integrity": "47627a21d3a13138b77fd0e4d790ba9d2e603c3510b686cde6b132fe9aa98a88"
+    },
     "@std/internal@1.0.14": {
       "integrity": "291516b3d4c35024d6ffbc0a9df5bf4c64116e05b50012cf846710152d2ffdf7"
+    },
+    "@std/toml@1.0.11": {
+      "integrity": "e084988b872ca4bad6aedfb7350f6eeed0e8ba88e9ee5e1590621c5b5bb8f715",
+      "dependencies": [
+        "jsr:@std/collections"
+      ]
     }
   },
   "npm": {
@@ -547,6 +561,12 @@
     "picocolors@1.1.1": {
       "integrity": "sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA=="
     },
+    "re2js@0.4.3": {
+      "integrity": "sha512-EuNmh7jurhHEE8Ge/lBo9JuMLb3qf866Xjjfyovw3wPc7+hlqDkZq4LwhrCQMEI+ARWfrKrHozEndzlpNT0WDg=="
+    },
+    "re2js@2.8.3": {
+      "integrity": "sha512-lUKeXVwMqU302DM/WaOm33XF2hhzjGUZ8CbLg4zSAMpW2PPkJ2+is25AROevNiw+DytFmKU5gsQ92cB1Kxy+fA=="
+    },
     "semver@7.8.4": {
       "integrity": "sha512-rUCObTnP32Q08R2uuIrt7r9PlEonuTmtuXYcW6s5kjdlj3xbnwe+21yXptAUYcMAABLkYYTtnmzb3w3EDZfueA==",
       "bin": true
@@ -569,6 +589,7 @@
     "dependencies": [
       "jsr:@std/assert@1.0.19",
       "jsr:@std/cli@1.0.30",
+      "jsr:@std/toml@1.0.11",
       "npm:@commitlint/config-conventional@21.0.2",
       "npm:@commitlint/lint@21.0.2",
       "npm:@cto.af/linewrap@4.0.1",
@@ -580,7 +601,8 @@
       "npm:markdownlint@0.40.0",
       "npm:micromark-extension-gfm@3.0.0",
       "npm:micromark@4.0.2",
-      "npm:picocolors@1.1.1"
+      "npm:picocolors@1.1.1",
+      "npm:re2js@2.8.3"
     ]
   }
 }

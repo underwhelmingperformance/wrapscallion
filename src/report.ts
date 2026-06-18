@@ -7,6 +7,7 @@ export type CommitMessageLintStatus = 'failed' | 'ok';
 export interface CommitMessageLintJsonReport {
 	readonly event: 'wrapscallion';
 	readonly failures: readonly CommitMessageJsonFailure[];
+	readonly skipped: readonly CommitMessageJsonSkip[];
 	readonly status: CommitMessageLintStatus;
 	readonly total: number;
 }
@@ -15,6 +16,12 @@ export interface CommitMessageLintJsonReport {
 export interface CommitMessageJsonFailure {
 	readonly commit: string;
 	readonly findings: readonly CommitMessageJsonFinding[];
+	readonly subject: string;
+}
+
+/** One skipped commit in the machine-readable report. */
+export interface CommitMessageJsonSkip {
+	readonly commit: string;
 	readonly subject: string;
 }
 
@@ -27,11 +34,17 @@ export interface CommitMessageJsonFinding {
 	readonly rule?: string;
 }
 
-/** Builds the JSONL payload used when stdout/stderr is not a terminal. */
+/**
+ * Builds the JSONL payload used when stdout/stderr is not a terminal. Skipped
+ * commits are listed separately and excluded from `total`, which counts the
+ * commits that were actually checked.
+ */
 export function jsonReport(
 	status: CommitMessageLintStatus,
 	checks: readonly CommitMessageCheck[],
 ): CommitMessageLintJsonReport {
+	const skipped = checks.filter((check) => check.skipped);
+
 	return {
 		event: 'wrapscallion',
 		failures: checks
@@ -41,8 +54,12 @@ export function jsonReport(
 				findings: check.findings.map((finding) => jsonFinding(finding)),
 				subject: check.commitMessage.subject,
 			})),
+		skipped: skipped.map((check) => ({
+			commit: check.commitMessage.label,
+			subject: check.commitMessage.subject,
+		})),
 		status,
-		total: checks.length,
+		total: checks.length - skipped.length,
 	};
 }
 
@@ -51,14 +68,19 @@ export function terminalFailureReport(
 	checks: readonly CommitMessageCheck[],
 	totalCount: number,
 	colours: Colours,
+	skippedCount = 0,
 ): string {
+	const skippedNote = skippedCount === 0
+		? ''
+		: ` (${formatNamedCount(skippedCount, 'commit message')} skipped)`;
+
 	const lines = [
 		`${colours.red('Wrapscallion failed')} for ${
 			formatNamedCount(
 				checks.length,
 				'commit message',
 			)
-		} out of ${formatInteger(totalCount)}.`,
+		} out of ${formatInteger(totalCount)}${skippedNote}.`,
 	];
 
 	for (const check of checks) {

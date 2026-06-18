@@ -1,4 +1,4 @@
-import { assertEquals } from '@std/assert';
+import { assertEquals, assertStringIncludes } from '@std/assert';
 
 import { main } from './cli.ts';
 import { hasTrackedChanges } from './worktree-status.ts';
@@ -24,6 +24,8 @@ Deno.test(
 				'  --dry-run                 show what --reword would change without moving refs',
 				'  --edit <file>             lint a commit message file, for commit-msg hooks',
 				'  --from <revision>         lint commits after this revision',
+				'  --ignore <pattern>        skip commits whose subject matches this regular',
+				'                            expression (repeatable)',
 				'  --reword                  rewrite fixable commit messages in the selected',
 				'                            range',
 				'  --to <revision>           lint commits up to this revision (default: "HEAD")',
@@ -82,6 +84,7 @@ Deno.test(
 								subject: 'not conventional',
 							},
 						],
+						skipped: [],
 						status: 'failed',
 						total: 1,
 					},
@@ -140,6 +143,164 @@ Deno.test(
 	},
 );
 
+Deno.test(
+	'a commit whose subject matches --ignore is skipped, not failed',
+	async () => {
+		await withCommitMessage('chore(main): release 1.2.3\n', async (file) => {
+			const result = await runCli([
+				'--edit',
+				file,
+				'--ignore',
+				'^chore\\(main\\): release ',
+			]);
+
+			assertEquals({
+				code: result.code,
+				events: normaliseEventDurations(parseJsonLines(result.stderr)),
+				stdout: result.stdout,
+			}, {
+				code: 0,
+				events: [
+					{
+						durationMs: 'number',
+						event: 'phase',
+						facts: { messages: '1', skipped: '1' },
+						label: 'Checking commit messages',
+						status: 'ok',
+					},
+					{
+						event: 'wrapscallion',
+						failures: [],
+						skipped: [{ commit: file, subject: 'chore(main): release 1.2.3' }],
+						status: 'ok',
+						total: 0,
+					},
+				],
+				stdout: '',
+			});
+		});
+	},
+);
+
+Deno.test('ignore patterns are read from the config file', async () => {
+	await withCommitMessage('chore(main): release 1.2.3\n', async (file) => {
+		const result = await runCli(
+			['--edit', file],
+			"ignore = ['^chore\\(main\\): release ']",
+		);
+
+		assertEquals({
+			code: result.code,
+			events: normaliseEventDurations(parseJsonLines(result.stderr)),
+		}, {
+			code: 0,
+			events: [
+				{
+					durationMs: 'number',
+					event: 'phase',
+					facts: { messages: '1', skipped: '1' },
+					label: 'Checking commit messages',
+					status: 'ok',
+				},
+				{
+					event: 'wrapscallion',
+					failures: [],
+					skipped: [{ commit: file, subject: 'chore(main): release 1.2.3' }],
+					status: 'ok',
+					total: 0,
+				},
+			],
+		});
+	});
+});
+
+Deno.test('the config file supplies a flag the command line omits', async () => {
+	await withCommitMessage('not conventional\n', async (file) => {
+		const result = await runCli(
+			['--edit', file, '--no-colour'],
+			'output-format = "github"',
+		);
+
+		assertEquals({ code: result.code, stdout: result.stdout }, {
+			code: 1,
+			stdout: [
+				`::error title=${file} not conventional::` +
+				'subject-empty: subject may not be empty%0A' +
+				'type-empty: type may not be empty',
+				'',
+			].join('\n'),
+		});
+	});
+});
+
+Deno.test('a command-line flag overrides the config file', async () => {
+	await withCommitMessage('not conventional\n', async (file) => {
+		const result = await runCli(
+			['--edit', file, '--output-format', 'json'],
+			'output-format = "github"',
+		);
+
+		const events = parseJsonLines(result.stderr).filter(
+			(event) => isRecord(event) && event.event === 'wrapscallion',
+		);
+
+		assertEquals({ code: result.code, events, stdout: result.stdout }, {
+			code: 1,
+			events: [
+				{
+					event: 'wrapscallion',
+					failures: [
+						{
+							commit: file,
+							findings: [
+								{
+									fixable: false,
+									message: 'subject-empty: subject may not be empty',
+									rule: 'subject-empty',
+								},
+								{
+									fixable: false,
+									message: 'type-empty: type may not be empty',
+									rule: 'type-empty',
+								},
+							],
+							subject: 'not conventional',
+						},
+					],
+					skipped: [],
+					status: 'failed',
+					total: 1,
+				},
+			],
+			stdout: '',
+		});
+	});
+});
+
+Deno.test('an invalid --ignore pattern is an operational error', async () => {
+	await withCommitMessage('feat: add upload\n', async (file) => {
+		const result = await runCli(['--edit', file, '--ignore', '(']);
+		const [event] = parseJsonLines(result.stderr);
+
+		assertEquals(result.code, 2);
+		assertEquals(isRecord(event) && event.event, 'error');
+		assertStringIncludes(
+			isRecord(event) ? String(event.message) : '',
+			'invalid ignore pattern "("',
+		);
+	});
+});
+
+Deno.test('a malformed config file is an operational error', async () => {
+	await withCommitMessage('feat: add upload\n', async (file) => {
+		const result = await runCli(['--edit', file], 'from = =');
+		const [event] = parseJsonLines(result.stderr);
+
+		assertEquals(result.code, 2);
+		assertEquals(isRecord(event) && event.event, 'error');
+	});
+});
+
 Deno.test('hasTrackedChanges ignores untracked-only and empty status', () => {
 	const statuses = [
 		'',
@@ -174,10 +335,33 @@ interface CliResult {
 	readonly stdout: string;
 }
 
-async function runCli(arguments_: readonly string[]): Promise<CliResult> {
+/** Runs `body` with a temporary commit message file, cleaning up afterwards. */
+async function withCommitMessage(
+	message: string,
+	body: (file: string) => Promise<void>,
+): Promise<void> {
+	const directory = await Deno.makeTempDir({ prefix: 'wrapscallion-' });
+	const file = `${directory}/COMMIT_EDITMSG`;
+	await Deno.writeTextFile(file, message);
+
+	try {
+		await body(file);
+	} finally {
+		await Deno.remove(directory, { recursive: true });
+	}
+}
+
+async function runCli(
+	arguments_: readonly string[],
+	configContents?: string,
+): Promise<CliResult> {
 	const stderr = new MemoryTextStream();
 	const stdout = new MemoryTextStream();
-	const code = await main(arguments_, { stderr, stdout });
+	const code = await main(arguments_, {
+		configReader: { read: () => Promise.resolve(configContents) },
+		stderr,
+		stdout,
+	});
 
 	return {
 		code,

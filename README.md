@@ -66,6 +66,28 @@ rewritten copies are unsigned; wrapscallion prints a warning naming how many
 lost their signature, and the signed originals stay reachable through the backup
 ref.
 
+### Ignoring commits
+
+Some commits are not worth linting, such as those created by release tooling,
+which rarely follow Conventional Commits. Pass `--ignore` with a regular
+expression to skip any commit whose subject matches it, and repeat the flag to
+give more than one pattern:
+
+```sh
+deno task wrapscallion --from origin/main --ignore '^chore\(.*\): release '
+```
+
+Skipped commits are neither linted nor reworded, but they stay in place so that
+rewording the rest of the range keeps the history linear. The report says how
+many commits were skipped. Patterns are usually easier to keep in the
+[configuration file](#configuration).
+
+Patterns use [RE2][re2] syntax, which matches in time linear in the subject
+length and so cannot be made to backtrack catastrophically. It does not support
+backreferences or lookaround; a pattern that uses them is reported as invalid.
+
+[re2]: https://github.com/google/re2/wiki/Syntax
+
 ### Output
 
 By default wrapscallion writes a human-readable report with a spinner when
@@ -77,6 +99,22 @@ the same readable report as `terminal` and additionally emits a GitHub Actions
 request's checks. Colour is independent of the format: it follows the usual
 `FORCE_COLOR`/`NO_COLOR` environment variables, and `--colour` / `--no-colour`
 override them.
+
+## Configuration
+
+Wrapscallion reads its settings from a `.wrapscallion.toml` file in the
+repository root, if one is present. Every command-line flag can be set there
+instead, using the flag's long name as the key. A flag passed on the command
+line always takes precedence over the file.
+
+```toml
+output-format = "github"
+ignore = ['^chore\(.*\): release ']
+```
+
+The `ignore` key takes a list of regular expressions, the same patterns the
+`--ignore` flag accepts. A command-line `--ignore` replaces the patterns from
+the file rather than adding to them.
 
 ## Pre-Commit
 
@@ -125,6 +163,11 @@ jobs:
 
       - uses: underwhelmingperformance/wrapscallion@v0.1.0
 ```
+
+The action reads `.wrapscallion.toml` from the repository root just as the
+command does. It also takes an `ignore` input, with one pattern per line, for
+projects that would rather configure the skipped commits in the workflow than in
+a file.
 
 ## Contributing
 
