@@ -124,13 +124,17 @@ but do not need Deno or Git installed in the hook image. Each release pins this
 hook to the published image by digest, so the `rev` you pin selects the exact,
 attested image that runs.
 
+<!-- x-release-please-start-version -->
+
 ```yaml
 repos:
   - repo: https://github.com/underwhelmingperformance/wrapscallion
-    rev: v0.1.0
+    rev: v0.0.3
     hooks:
       - id: wrapscallion
 ```
+
+<!-- x-release-please-end -->
 
 For a faster local hook on machines that already have Deno installed, use
 `wrapscallion-system` instead.
@@ -141,6 +145,8 @@ For a faster local hook on machines that already have Deno installed, use
 
 Use the bundled action to lint each commit in a pull request. The workflow must
 fetch the full history so the selected commit range exists locally.
+
+<!-- x-release-please-start-version -->
 
 ```yaml
 name: commit-messages
@@ -156,13 +162,15 @@ jobs:
   lint:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@<latest SHA> # vX.Y.Z
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: underwhelmingperformance/wrapscallion@v0.1.0
+      - uses: underwhelmingperformance/wrapscallion@v0.0.3
 ```
+
+<!-- x-release-please-end -->
 
 The action reads `.wrapscallion.toml` from the repository root just as the
 command does. It also takes an `ignore` input, with one pattern per line, for
