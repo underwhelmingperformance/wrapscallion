@@ -39,7 +39,7 @@
 		"useTabs": true,
 		"singleQuote": true,
 		"proseWrap": "always",
-		"exclude": ["dist", "node_modules"]
+		"exclude": ["dist", "node_modules", "CHANGELOG.md"]
 	},
 	"lint": {
 		"exclude": ["dist", "node_modules"],
