@@ -383,7 +383,7 @@ Deno.test(
 				[
 					'docs: explain external issue',
 					'',
-					'Issue: PROJECT-123 with a deliberately long value that should remain trailer text rather than being wrapped.',
+					'Issue: PROJECT-123 with a deliberately long value that should remain trailer text and stay unwrapped.',
 					'Reviewed-on: https://example.com/reviews/1234567890',
 				].join('\n'),
 			),
@@ -401,7 +401,7 @@ Deno.test(
 					fixedMessage: [
 						'docs: explain external issue',
 						'',
-						'Issue: PROJECT-123 with a deliberately long value that should remain trailer text rather than being wrapped.',
+						'Issue: PROJECT-123 with a deliberately long value that should remain trailer text and stay unwrapped.',
 						'Reviewed-on: https://example.com/reviews/1234567890',
 					].join('\n'),
 					status: 'passed',

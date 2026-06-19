@@ -5,11 +5,9 @@ Commits and want commit bodies to be readable Markdown wrapped at 72 columns. It
 can check a single `commit-msg` hook file, lint every commit in a pull request
 range, and reword fixable commits on a clean local branch.
 
-The project is distributed as a Deno command rather than a Node library. Deno is
-a good fit here because the tool is an executable application: it gives us a
-single runtime for checking, formatting, testing, running and compiling the
-command, while still supporting the npm commitlint packages used internally. The
-Deno version is pinned in `.dvmrc`.
+Wrapscallion is a Deno command. A single runtime checks, formats, tests, runs
+and compiles it, and it still uses the npm commitlint packages it depends on
+internally. The Deno version is pinned in `.dvmrc`.
 
 ## Use
 
@@ -113,8 +111,7 @@ ignore = ['^chore\(.*\): release ']
 ```
 
 The `ignore` key takes a list of regular expressions, the same patterns the
-`--ignore` flag accepts. A command-line `--ignore` replaces the patterns from
-the file rather than adding to them.
+`--ignore` flag accepts. A command-line `--ignore` replaces the file's patterns.
 
 ## Pre-Commit
 
@@ -174,8 +171,7 @@ jobs:
 
 The action reads `.wrapscallion.toml` from the repository root just as the
 command does. It also takes an `ignore` input, with one pattern per line, for
-projects that would rather configure the skipped commits in the workflow than in
-a file.
+projects that keep the skipped commits in the workflow itself.
 
 ## Contributing
 

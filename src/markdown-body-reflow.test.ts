@@ -292,8 +292,8 @@ Deno.test(
 			'renamed during the review, the kept key may be scoped to the old name,',
 			'so the settle menu reappears with the fix in it: create a key scoped',
 			'to the new bucket (recommended), enter a pair, or keep the current key',
-			'as an explicit choice. The settle outcome is a sum type (settled, keep,',
-			'cancelled) rather than an optional pair.',
+			'as an explicit choice. The settle outcome is a sum type with the cases',
+			'settled, keep and cancelled.',
 			'',
 		].join('\n');
 
@@ -308,8 +308,8 @@ Deno.test(
 				'during the review, the kept key may be scoped to the old name, so the',
 				'settle menu reappears with the fix in it: create a key scoped to the new',
 				'bucket (recommended), enter a pair, or keep the current key as an',
-				'explicit choice. The settle outcome is a sum type (settled, keep,',
-				'cancelled) rather than an optional pair.',
+				'explicit choice. The settle outcome is a sum type with the cases',
+				'settled, keep and cancelled.',
 				'',
 			].join('\n'),
 		});
@@ -400,8 +400,8 @@ for (
 			'renamed during the review, the kept key may be scoped to the old name,',
 			'so the settle menu reappears with the fix in it: create a key scoped',
 			'to the new bucket (recommended), enter a pair, or keep the current key',
-			'as an explicit choice. The settle outcome is a sum type (settled, keep,',
-			'cancelled) rather than an optional pair.',
+			'as an explicit choice. The settle outcome is a sum type with the cases',
+			'settled, keep and cancelled.',
 			'',
 		].join('\n'),
 		'Read https://example.com/releases/2026/06/09/with/a/very/long/path before changing the compatibility rules for clients.\n',

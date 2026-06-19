@@ -238,10 +238,10 @@ jobs:
 
           gh release upload "v${VERSION}" dist/wrapscallion-* dist/SHA256SUMS --clobber
 
-      # release-please tracks state through the pull request label. Because the
-      # release was tagged here rather than by release-please, flip the label
-      # ourselves; otherwise the next run aborts with "untagged, merged release
-      # PRs outstanding" and stops opening new release pull requests.
+      # release-please tracks state through the pull request label and updates
+      # it when it tags a release. This workflow does the tagging, so flip the
+      # label ourselves; otherwise the next run aborts with "untagged, merged
+      # release PRs outstanding" and stops opening new release pull requests.
       - name: Mark the release pull request as tagged
         env:
           GH_TOKEN: ${{ github.token }}
