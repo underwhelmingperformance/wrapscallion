@@ -35,7 +35,7 @@ Deno.test('patterns are unanchored regular expressions', () => {
 
 // RE2 rejects the catastrophic-backtracking constructs (backreferences and
 // lookaround) that a backtracking engine would accept, so these are reported
-// as invalid patterns rather than compiled.
+// as invalid patterns.
 const invalidPatterns = [
 	'(unterminated',
 	'(a)\\1',

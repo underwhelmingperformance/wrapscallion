@@ -62,7 +62,7 @@ export async function rewordCommitMessages(
 
 /**
  * The commits between the linted range's end and HEAD. When `--to` is below
- * HEAD these are reparented onto the rewritten history rather than dropped.
+ * HEAD these are reparented onto the rewritten history.
  */
 async function trailingCommits(
 	repo: GitContext,

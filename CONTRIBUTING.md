@@ -36,8 +36,7 @@ release-please runs as the default `GITHUB_TOKEN`, so its pull request does not
 trigger the required checks on its own; it opens the pull request as a draft. To
 cut a release, review it and mark it ready for review. That is a human action
 and triggers the checks, which listen for `ready_for_review`. Once they pass the
-pull request goes through the merge queue like any other change, so `main`
-advances through normal branch protection rather than a bypass.
+pull request goes through the merge queue like any other change.
 
 Merging the release pull request triggers the `release` workflow, which:
 

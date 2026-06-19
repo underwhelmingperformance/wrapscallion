@@ -205,7 +205,7 @@ const ignoreNothing: CommitSubjectFilter = { matches: () => false };
 /**
  * Lints each commit message independently, preserving a separate report per
  * commit so multi-commit pull requests show each failing commit clearly.
- * Commits whose subject matches {@link ignore} are skipped rather than linted.
+ * Commits whose subject matches {@link ignore} are skipped.
  */
 export function checkCommitMessages<M extends CommitMessage>(
 	commitMessages: readonly M[],
