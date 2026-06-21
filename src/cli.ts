@@ -18,7 +18,11 @@ import { IgnoreMatcher } from './ignore-matcher.ts';
 import { checkCommitMessages, type CommitMessageCheck } from './linter.ts';
 import { NodeFileSystem } from './node-file-system.ts';
 import { jsonReport, terminalFailureReport } from './report.ts';
-import { type OutputSettings, resolveOutput } from './reporter-mode.ts';
+import {
+	type OutputEnvironment,
+	type OutputSettings,
+	resolveOutput,
+} from './reporter-mode.ts';
 import {
 	type Colours,
 	createReporter,
@@ -51,7 +55,10 @@ export async function main(
 ): Promise<number> {
 	const stderr = options.stderr ?? denoTextStream(Deno.stderr);
 	const stdout = options.stdout ?? denoTextStream(Deno.stdout);
-	const isTerminal = options.stderr === undefined && Deno.stderr.isTerminal();
+	const environment: OutputEnvironment = {
+		isTerminal: options.stderr === undefined && Deno.stderr.isTerminal(),
+		githubActions: Deno.env.get('GITHUB_ACTIONS') === 'true',
+	};
 	let settings: OutputSettings | undefined;
 
 	try {
@@ -64,7 +71,7 @@ export async function main(
 			{ stderr, stdout },
 			config,
 		);
-		settings = resolveOutput(output, isTerminal);
+		settings = resolveOutput(output, environment);
 		const { colours, format } = settings;
 		const git = createGit({ cwd: root, fs: new NodeFileSystem() });
 		const reporter = createReporter({ mode: format, colours, stream: stderr });
@@ -90,7 +97,7 @@ export async function main(
 		reportFailures({ checks, colours, failures, format, stderr, stdout });
 		return 1;
 	} catch (error) {
-		return handleError(error, settings, isTerminal, stderr);
+		return handleError(error, settings, environment, stderr);
 	}
 }
 
@@ -195,7 +202,7 @@ function reportFailures(report: FailureReport): void {
 function handleError(
 	error: unknown,
 	settings: OutputSettings | undefined,
-	isTerminal: boolean,
+	environment: OutputEnvironment,
 	stderr: TextStream,
 ): number {
 	if (error instanceof CommanderError) {
@@ -203,7 +210,7 @@ function handleError(
 		return error.code === 'commander.helpDisplayed' ? 0 : operationalErrorExit;
 	}
 
-	const { colours, format } = settings ?? resolveOutput({}, isTerminal);
+	const { colours, format } = settings ?? resolveOutput({}, environment);
 
 	switch (format) {
 		case 'json':

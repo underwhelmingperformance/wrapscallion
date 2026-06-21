@@ -7,6 +7,12 @@ export interface OutputPreferences {
 	readonly colour?: boolean;
 }
 
+/** The environment signals that steer format selection. */
+export interface OutputEnvironment {
+	readonly isTerminal: boolean;
+	readonly githubActions: boolean;
+}
+
 export interface OutputSettings {
 	readonly format: ReporterMode;
 	readonly colours: Colours;
@@ -14,16 +20,16 @@ export interface OutputSettings {
 
 /**
  * Resolves the output format and colouring from the CLI flags and environment.
- * The format follows `--output-format`, then `PRE_COMMIT`, then
- * `GITHUB_ACTIONS`, then whether the stream is a terminal. Colour follows
- * `--colour`/`--no-colour` as an override of picocolors' own
- * `FORCE_COLOR`/`NO_COLOR` detection, and is never applied to JSON output.
+ * The format follows `--output-format`, then `GITHUB_ACTIONS`, then whether the
+ * stream is a terminal. Colour follows `--colour`/`--no-colour` as an override
+ * of picocolors' own `FORCE_COLOR`/`NO_COLOR` detection, and is never applied to
+ * JSON output.
  */
 export function resolveOutput(
 	preferences: OutputPreferences,
-	isTerminal: boolean,
+	environment: OutputEnvironment,
 ): OutputSettings {
-	const format = resolveFormat(preferences.format, isTerminal);
+	const format = resolveFormat(preferences.format, environment);
 
 	return {
 		format,
@@ -33,21 +39,17 @@ export function resolveOutput(
 
 function resolveFormat(
 	explicit: ReporterMode | undefined,
-	isTerminal: boolean,
+	environment: OutputEnvironment,
 ): ReporterMode {
 	if (explicit !== undefined) {
 		return explicit;
 	}
 
-	if (Deno.env.get('PRE_COMMIT') === '1') {
-		return 'json';
-	}
-
-	if (Deno.env.get('GITHUB_ACTIONS') === 'true') {
+	if (environment.githubActions) {
 		return 'github';
 	}
 
-	return isTerminal ? 'terminal' : 'json';
+	return environment.isTerminal ? 'terminal' : 'json';
 }
 
 function resolveColour(

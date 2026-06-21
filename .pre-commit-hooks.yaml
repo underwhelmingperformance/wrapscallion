@@ -1,7 +1,7 @@
 - id: wrapscallion
   name: wrapscallion
   description: Lint Conventional Commit messages and 72-column bodies.
-  entry: wrapscallion --output-format json --edit
+  entry: wrapscallion --edit
   language: docker
   stages:
     - commit-msg

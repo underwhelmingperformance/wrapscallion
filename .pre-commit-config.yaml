@@ -82,7 +82,7 @@ repos:
 
       - id: wrapscallion
         name: wrapscallion
-        entry: deno run --allow-read --allow-env src/main.ts --output-format json --edit
+        entry: deno run --allow-read --allow-env src/main.ts --edit
         language: system
         stages:
           - commit-msg
