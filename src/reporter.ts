@@ -35,6 +35,8 @@ export interface ReporterOptions {
 	readonly mode: ReporterMode;
 	readonly colours: Colours;
 	readonly stream?: TextStream;
+	/** Animate the spinner; set only when writing to an interactive terminal. */
+	readonly animate?: boolean;
 }
 
 export interface TextStream {
@@ -48,11 +50,7 @@ export function createReporter(options: ReporterOptions): Reporter {
 
 	return options.mode === 'json'
 		? createJsonReporter(stream)
-		: createTerminalReporter(
-			stream,
-			options.stream === undefined,
-			options.colours,
-		);
+		: createTerminalReporter(stream, options.animate ?? false, options.colours);
 }
 
 function createTerminalReporter(

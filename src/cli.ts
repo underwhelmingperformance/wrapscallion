@@ -74,7 +74,12 @@ export async function main(
 		settings = resolveOutput(output, environment);
 		const { colours, format } = settings;
 		const git = createGit({ cwd: root, fs: new NodeFileSystem() });
-		const reporter = createReporter({ mode: format, colours, stream: stderr });
+		const reporter = createReporter({
+			mode: format,
+			colours,
+			stream: stderr,
+			animate: environment.isTerminal,
+		});
 
 		const checks = await checkPhase(
 			reporter,
