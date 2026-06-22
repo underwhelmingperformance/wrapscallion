@@ -1,18 +1,30 @@
 name: release
 
-# Cutting a release is a two-stage flow. release-please keeps a "release"
-# pull request up to date that bumps the version in deno.json and the pinned
-# examples in the README. Merging that pull request is what triggers this
-# workflow: it builds and publishes the image, then hangs the vX.Y.Z tag off a
-# child commit that pins the pre-commit hook to the freshly published digest.
-# That digest is only known after the build, so it cannot live in the merged
-# commit; main therefore advances through the normal protected pull request and
-# the tag carries the release-only changes.
+# release-please keeps a release pull request up to date that bumps the version
+# in deno.json and the pinned examples in the README. The release image pins the
+# pre-commit hook to a published, attested image by digest, but that digest is
+# only known after a build, so it cannot come from release-please itself. The
+# flow therefore spans four events:
+#
+#   * ready_for_review: build and push the image, attest it, and commit the
+#     digest pin onto the release branch so it lands in the commit that merges;
+#   * merge_group: refuse the merge if a co-queued change moved the build inputs
+#     out from under the pinned digest;
+#   * closed (merged): draft the release with its notes and standalone binaries;
+#   * published: publishing the draft makes GitHub create the vX.Y.Z tag on the
+#     merge commit -- an ancestor of main, which is how release-please finds the
+#     previous release -- after which we clear the pending label so release-please
+#     opens the next release pull request.
 
 on:
   pull_request:
     types:
+      - ready_for_review
       - closed
+  merge_group:
+  release:
+    types:
+      - published
 
 permissions: {}
 
@@ -21,12 +33,252 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  prepare-pin:
+    name: prepare pin
+    # Only the release-please bot's pull request, from this repository, carries
+    # the pin. The same-repo and author checks keep a fork's or a look-alike
+    # branch's code out of this write-privileged flow. The author is the bot
+    # because release-please opens the pull request with the GITHUB_TOKEN.
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'ready_for_review' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == 'github-actions[bot]' &&
+      github.event.pull_request.head.ref == 'release-please--branches--main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Read the released version
+        id: version
+        run: |
+          set -euo pipefail
+
+          version=$(jq -r '."."' .release-please-manifest.json)
+
+          if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "manifest version must be MAJOR.MINOR.PATCH, got: ${version}" >&2
+            exit 1
+          fi
+
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+
+  pin-build:
+    name: pin build
+    needs: prepare-pin
+    permissions:
+      contents: read # check out the source to build the image
+      packages: write # push the per-arch images and index to GHCR
+      id-token: write # OIDC for the image provenance attestation
+      attestations: write # write the image provenance attestation
+    # Publish the index now, under a candidate pr-<number> tag, so the digest the
+    # pin records is a real, pullable, attested image. The release applies the
+    # semver tags to this same digest once it is on main.
+    uses: ./.github/workflows/build.yml
+    with:
+      push: true
+      version: ${{ needs.prepare-pin.outputs.version }}
+      ref: ${{ github.event.pull_request.head.sha }}
+
+  pin-commit:
+    name: pin commit
+    needs: [prepare-pin, pin-build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # commit the pin onto the release branch
+    env:
+      BRANCH: ${{ github.event.pull_request.head.ref }}
+      DIGEST: ${{ needs.pin-build.outputs.digest }}
+      IMAGE: ${{ needs.pin-build.outputs.image }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+      VERSION: ${{ needs.prepare-pin.outputs.version }}
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          # Check out the exact commit the pin is built from, so the committed
+          # tree matches the built tree.
+          ref: ${{ env.SHA }}
+          persist-credentials: false
+
+      - uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282 # v2.0.4
+        with:
+          deno-version-file: .dvmrc
+
+      - name: Pin the pre-commit hook to the released image
+        id: pin
+        run: |
+          set -euo pipefail
+
+          # The committed manifest builds the hook image from the Dockerfile so
+          # it works on any checkout. A release instead pins the published,
+          # attested image by digest, so patch only the two fields that differ.
+          yq --inplace '
+            (.[] | select(.id == "wrapscallion")) |= (
+              .language = "docker_image" |
+              .entry = strenv(IMAGE) + "@" + strenv(DIGEST) + " --output-format json --edit"
+            )
+          ' .pre-commit-hooks.yaml
+
+          deno fmt .pre-commit-hooks.yaml
+
+          # A re-run of ready_for_review pins the same digest and has nothing to
+          # commit.
+          if git diff --quiet -- .pre-commit-hooks.yaml; then
+            echo "changed=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "changed=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+      - name: Commit the pin
+        if: ${{ steps.pin.outputs.changed == 'true' }}
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const fs = require("fs");
+            const { owner, repo } = context.repo;
+            const branch = process.env.BRANCH;
+            const baseSha = process.env.SHA;
+
+            const base = await github.rest.git.getCommit({
+              owner,
+              repo,
+              commit_sha: baseSha,
+            });
+
+            const blob = await github.rest.git.createBlob({
+              owner,
+              repo,
+              encoding: "base64",
+              content: fs.readFileSync(".pre-commit-hooks.yaml").toString("base64"),
+            });
+
+            const tree = await github.rest.git.createTree({
+              owner,
+              repo,
+              base_tree: base.data.tree.sha,
+              tree: [
+                { path: ".pre-commit-hooks.yaml", mode: "100644", type: "blob", sha: blob.data.sha },
+              ],
+            });
+
+            const commit = await github.rest.git.createCommit({
+              owner,
+              repo,
+              message: `chore: pin the pre-commit hook to the v${process.env.VERSION} image`,
+              tree: tree.data.sha,
+              parents: [baseSha],
+            });
+
+            // force: false keeps this a fast-forward: the pin lands only while
+            // the branch still points at the built commit, so the committed tree
+            // stays equal to the built one. GitHub signs the commit it creates.
+            //
+            // Moving the branch raises a pull_request synchronize event. Because
+            // a GITHUB_TOKEN raised it, its checks start in an approval-required
+            // state, so a maintainer releases them with one click before merging.
+            await github.rest.git.updateRef({
+              owner,
+              repo,
+              ref: `heads/${branch}`,
+              sha: commit.data.sha,
+              force: false,
+            });
+
+  guard:
+    name: guard
+    # The merge queue's required check. The pin was built from the release pull
+    # request's tree; if a co-queued change alters a build input, the pinned
+    # digest no longer describes the source that merges, so block it.
+    if: github.event_name == 'merge_group'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read # read trees and compare commits
+      pull-requests: read # find the open release pull request
+    steps:
+      - name: Guard the pinned digest against co-queued drift
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const headSha = context.payload.merge_group.head_sha;
+
+            const prs = await github.rest.pulls.list({
+              owner,
+              repo,
+              state: "open",
+              head: `${owner}:release-please--branches--main`,
+            });
+            if (prs.data.length === 0) {
+              core.info("no open release pull request; nothing to guard");
+              return;
+            }
+            const releaseHead = prs.data[0].head.sha;
+
+            // Only guard the group that is actually merging the release.
+            const cmp = await github.rest.repos.compareCommits({
+              owner,
+              repo,
+              base: releaseHead,
+              head: headSha,
+            });
+            if (cmp.data.status !== "ahead" && cmp.data.status !== "identical") {
+              core.info("release pull request is not in this merge group");
+              return;
+            }
+
+            const isBuildInput = (path) =>
+              ["Dockerfile", ".dockerignore", "deno.json", "deno.lock"]
+                .includes(path) || path.startsWith("src/");
+
+            const buildInputs = async (sha) => {
+              const commit = await github.rest.git.getCommit({
+                owner,
+                repo,
+                commit_sha: sha,
+              });
+              const tree = await github.rest.git.getTree({
+                owner,
+                repo,
+                tree_sha: commit.data.tree.sha,
+                recursive: "1",
+              });
+              if (tree.data.truncated) {
+                throw new Error("tree listing truncated; cannot verify build inputs");
+              }
+              return tree.data.tree
+                .filter((e) => e.type === "blob" && isBuildInput(e.path))
+                .map((e) => `${e.path}:${e.sha}`)
+                .sort()
+                .join("\n");
+            };
+
+            const merged = await buildInputs(headSha);
+            const pinned = await buildInputs(releaseHead);
+
+            if (merged !== pinned) {
+              core.setFailed(
+                "a co-queued change altered the build inputs, so the pinned " +
+                  "release digest no longer describes the merging source",
+              );
+              return;
+            }
+
+            core.info("build inputs match the pinned release commit");
+
   prepare:
     name: prepare
     # Only the merged release-please pull request reaches the rest of the flow.
     # release-please labels it "autorelease: pending"; an ordinary merge has no
     # such label and is ignored.
     if: >-
+      github.event_name == 'pull_request' &&
       github.event.pull_request.merged == true &&
       contains(github.event.pull_request.labels.*.name, 'autorelease: pending')
     runs-on: ubuntu-24.04
@@ -58,79 +310,26 @@ jobs:
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
           echo "sha=${SHA}" >> "${GITHUB_OUTPUT}"
 
-  build:
-    name: build
-    needs: prepare
-    permissions:
-      contents: read # check out the source to build the image
-      packages: write # push the per-arch images and index to GHCR
-    uses: ./.github/workflows/build.yml
-    with:
-      push: true
-      version: ${{ needs.prepare.outputs.version }}
-      ref: ${{ needs.prepare.outputs.sha }}
-
   release:
     name: release
-    needs: [prepare, build]
+    needs: prepare
     runs-on: ubuntu-24.04
     permissions:
-      contents: write # create the tag (off main) and the release
-      packages: write # attach the provenance attestation to the image
-      id-token: write # OIDC for build provenance attestation
-      attestations: write # write the build provenance attestation
-      artifact-metadata: write # link the pushed image on the org's artifacts page
-      issues: write # ensure the autorelease label exists
-      pull-requests: write # mark the release pull request as tagged
+      contents: write # create the draft release and upload the binaries to it
+      id-token: write # OIDC for the standalone binary attestation
+      attestations: write # write the standalone binary attestation
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
       BASE_SHA: ${{ needs.prepare.outputs.sha }}
-      IMAGE: ${{ needs.build.outputs.image }}
-      DIGEST: ${{ needs.build.outputs.digest }}
-      PR_NUMBER: ${{ github.event.pull_request.number }}
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ needs.prepare.outputs.sha }}
           persist-credentials: false
 
-      # push-to-registry attaches the attestation to the image in GHCR, which
-      # needs registry credentials just like pushing the image itself does.
-      - name: Log in to GHCR
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
-        with:
-          subject-name: ${{ needs.build.outputs.image }}
-          subject-digest: ${{ needs.build.outputs.digest }}
-          push-to-registry: true
-
       - uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282 # v2.0.4
         with:
           deno-version-file: .dvmrc
-
-      - name: Pin the pre-commit hook to the released image
-        run: |
-          set -euo pipefail
-
-          # The committed manifest builds the hook image from the Dockerfile so
-          # it works on any checkout. A release instead pins the published,
-          # attested image by digest, so patch only the two fields that differ.
-          # The version already landed on main through the release pull request;
-          # this digest is the only release-only change, so it is all the tag
-          # commit carries on top of the merged commit.
-          yq --inplace '
-            (.[] | select(.id == "wrapscallion")) |= (
-              .language = "docker_image" |
-              .entry = strenv(IMAGE) + "@" + strenv(DIGEST) + " --output-format json --edit"
-            )
-          ' .pre-commit-hooks.yaml
-
-          deno fmt .pre-commit-hooks.yaml
 
       - name: Compile standalone binaries
         run: |
@@ -167,69 +366,28 @@ jobs:
         with:
           subject-path: dist/wrapscallion-*
 
-      - name: Create signed tag and draft release
+      - name: Draft the release
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
-            const fs = require("fs");
             const { owner, repo } = context.repo;
             const tag = `v${process.env.VERSION}`;
 
-            // Build the release commit through the API so GitHub signs it: the
-            // tag then carries a verified signature even though it is created in
-            // CI. Parent it on the merged release commit, which already carries
-            // the version bump. The tag hangs off that commit with only the
-            // pinned digest added, and main is left where the merge put it, so
-            // this plays nicely with a protected, PR-only main branch.
-            const baseSha = process.env.BASE_SHA;
-            const baseCommit = await github.rest.git.getCommit({
-              owner,
-              repo,
-              commit_sha: baseSha,
-            });
-
-            const blob = async (path) =>
-              (await github.rest.git.createBlob({
-                owner,
-                repo,
-                encoding: "base64",
-                content: fs.readFileSync(path).toString("base64"),
-              })).data.sha;
-
-            const tree = await github.rest.git.createTree({
-              owner,
-              repo,
-              base_tree: baseCommit.data.tree.sha,
-              tree: [
-                { path: ".pre-commit-hooks.yaml", mode: "100644", type: "blob", sha: await blob(".pre-commit-hooks.yaml") },
-              ],
-            });
-
-            const commit = await github.rest.git.createCommit({
-              owner,
-              repo,
-              message: `chore(release): ${tag}`,
-              tree: tree.data.sha,
-              parents: [baseSha],
-            });
-
-            await github.rest.git.createRef({
-              owner,
-              repo,
-              ref: `refs/tags/${tag}`,
-              sha: commit.data.sha,
-            });
-
+            // Draft it on the merge commit. A draft creates no tag; GitHub
+            // creates the tag at this commit only when a maintainer publishes
+            // -- an ancestor of main, which is how release-please finds the
+            // previous release.
             await github.rest.repos.createRelease({
               owner,
               repo,
               tag_name: tag,
+              target_commitish: process.env.BASE_SHA,
               name: tag,
               draft: true,
               generate_release_notes: true,
             });
 
-      - name: Attach the standalone binaries to the release
+      - name: Attach the standalone binaries to the draft
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -238,10 +396,17 @@ jobs:
 
           gh release upload "v${VERSION}" dist/wrapscallion-* dist/SHA256SUMS --clobber
 
-      # release-please tracks state through the pull request label and updates
-      # it when it tags a release. This workflow does the tagging, so flip the
-      # label ourselves; otherwise the next run aborts with "untagged, merged
-      # release PRs outstanding" and stops opening new release pull requests.
+  publish:
+    name: publish
+    # When a maintainer publishes the draft, GitHub creates the vX.Y.Z tag and
+    # fires this event as the maintainer (not GITHUB_TOKEN), so it runs. Clearing
+    # the pending label lets release-please open the next release pull request.
+    if: github.event_name == 'release'
+    runs-on: ubuntu-24.04
+    permissions:
+      issues: write # ensure the autorelease label exists
+      pull-requests: write # mark the release pull request as tagged
+    steps:
       - name: Mark the release pull request as tagged
         env:
           GH_TOKEN: ${{ github.token }}
@@ -250,6 +415,15 @@ jobs:
           set -euo pipefail
 
           gh label create 'autorelease: tagged' --color ededed --force
-          gh pr edit "${PR_NUMBER}" \
+
+          number=$(gh pr list --state merged --label 'autorelease: pending' \
+            --json number --jq '.[0].number')
+
+          if [[ -z "${number}" ]]; then
+            echo "no pending release pull request to mark tagged"
+            exit 0
+          fi
+
+          gh pr edit "${number}" \
             --remove-label 'autorelease: pending' \
             --add-label 'autorelease: tagged'

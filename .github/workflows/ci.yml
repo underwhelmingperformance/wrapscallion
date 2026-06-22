@@ -35,20 +35,38 @@ jobs:
       - run: deno task check
 
   build:
-    name: build
+    name: build (${{ matrix.arch }})
     if: ${{ github.event_name != 'push' }}
+    runs-on: ${{ matrix.runner }}
     permissions:
-      contents: read
-    uses: ./.github/workflows/build.yml
-    with:
-      push: false
+      contents: read # check out the source to build and smoke-test the image
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/build-image
+        with:
+          platform: ${{ matrix.platform }}
 
   build-and-publish:
     name: build-and-publish
     if: ${{ github.event_name == 'push' }}
     permissions:
       contents: read # check out the source to build the image
-      packages: write # push the branch-tagged image to GHCR on main
+      packages: write # push the branch-tagged image and index to GHCR
+      id-token: write # OIDC for the release-index provenance attestation
+      attestations: write # write the release-index provenance attestation
     uses: ./.github/workflows/build.yml
     with:
       push: true

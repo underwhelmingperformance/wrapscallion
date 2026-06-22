@@ -1,0 +1,49 @@
+name: Build and smoke-test the image
+description: >-
+  Build the wrapscallion image for one platform, load it, and run it the way the
+  pre-commit hook does so a broken entrypoint fails before anything is published.
+
+inputs:
+  platform:
+    description: Target platform, for example linux/amd64.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
+
+    - name: Build the image for ${{ inputs.platform }}
+      uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+      with:
+        context: .
+        platforms: ${{ inputs.platform }}
+        provenance: false
+        sbom: false
+        load: true
+        tags: wrapscallion:ci
+
+    - name: Smoke test the image
+      shell: bash
+      env:
+        IMAGE_REF: wrapscallion:ci
+      run: |
+        set -euo pipefail
+
+        # Run the freshly built image the way the pre-commit hook does. A broken
+        # entrypoint or a missing runtime dependency fails here, before publish.
+        work="$(mktemp -d)"
+        printf 'feat: a valid conventional commit subject\n\nA body that stays within the column limit.\n' > "${work}/good"
+        printf 'feat: subject is fine but the body is too long\n\nThis body line is deliberately far too long to fit within the seventy-two column limit that wrapscallion enforces.\n' > "${work}/bad"
+
+        docker run --rm --volume "${work}:/work:ro" "${IMAGE_REF}" \
+          --output-format json --edit /work/good
+
+        status=0
+        docker run --rm --volume "${work}:/work:ro" "${IMAGE_REF}" \
+          --output-format json --edit /work/bad || status="$?"
+
+        if [[ "${status}" -ne 1 ]]; then
+          echo "expected exit 1 for a failing commit message, got ${status}" >&2
+          exit 1
+        fi
