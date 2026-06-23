@@ -1,8 +1,10 @@
 name: build
 
-# This is a reusable workflow. The GITHUB_TOKEN permissions are provided by the
-# caller's job: callers that only validate the build grant contents: read, while
-# the release grants packages: write so the images and index can be pushed.
+# This is a reusable workflow. GitHub checks a called workflow's permissions
+# against the caller as a whole -- the union across its jobs, including ones a
+# given call skips -- so every caller grants the full set the jobs declare:
+# contents: read to build, packages: write to push, and id-token plus
+# attestations: write to attest the release index.
 
 on:
   workflow_call:
@@ -30,10 +32,15 @@ on:
         description: The digest of the pushed multi-arch index.
         value: ${{ jobs.merge.outputs.digest }}
 
+permissions: {}
+
 jobs:
   build:
     name: build (${{ matrix.arch }})
     runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read # check out the source to build the image
+      packages: write # push the per-arch image by digest when inputs.push
     strategy:
       fail-fast: false
       matrix:
@@ -72,45 +79,12 @@ jobs:
           jq --arg v "${VERSION}" '.version = $v' deno.json > "${tmp}"
           mv "${tmp}" deno.json
 
-      - uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
-
-      # Build and load the image locally first so the smoke test runs the exact
-      # bytes we are about to push. The push step below rebuilds from the same
-      # context and hits the buildx cache, so this does not double the work.
-      - name: Build the image for ${{ matrix.platform }}
-        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
+      # Build, load and smoke-test the image. The push step below rebuilds from
+      # the same context and hits the buildx cache, so this does not double the
+      # work.
+      - uses: ./.github/actions/build-image
         with:
-          context: .
-          platforms: ${{ matrix.platform }}
-          provenance: false
-          sbom: false
-          load: true
-          tags: wrapscallion:ci
-
-      - name: Smoke test the image
-        env:
-          IMAGE_REF: wrapscallion:ci
-        run: |
-          set -euo pipefail
-
-          # Run the freshly built image the way the pre-commit hook does. A
-          # broken entrypoint or a missing runtime dependency fails the build
-          # before the image is published.
-          work="$(mktemp -d)"
-          printf 'feat: a valid conventional commit subject\n\nA body that stays within the column limit.\n' > "${work}/good"
-          printf 'feat: subject is fine but the body is too long\n\nThis body line is deliberately far too long to fit within the seventy-two column limit that wrapscallion enforces.\n' > "${work}/bad"
-
-          docker run --rm --volume "${work}:/work:ro" "${IMAGE_REF}" \
-            --output-format json --edit /work/good
-
-          status=0
-          docker run --rm --volume "${work}:/work:ro" "${IMAGE_REF}" \
-            --output-format json --edit /work/bad || status="$?"
-
-          if [[ "${status}" -ne 1 ]]; then
-            echo "expected exit 1 for a failing commit message, got ${status}" >&2
-            exit 1
-          fi
+          platform: ${{ matrix.platform }}
 
       - name: Log in to GHCR
         if: ${{ inputs.push }}
@@ -155,6 +129,11 @@ jobs:
     if: ${{ inputs.push }}
     needs: build
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read # read the per-arch digest artifacts from this run
+      packages: write # push the assembled index
+      id-token: write # OIDC for the release-index provenance attestation
+      attestations: write # write the release-index provenance attestation
     outputs:
       image: ${{ steps.image.outputs.image }}
       digest: ${{ steps.index.outputs.digest }}
@@ -182,14 +161,10 @@ jobs:
         uses: docker/metadata-action@80c7e94dd9b9319bd5eb7a0e0fe9291e23a2a2e9 # v6.1.0
         with:
           images: ${{ steps.image.outputs.image }}
-          flavor: |
-            latest=${{ inputs.version != '' }}
-            prefix=v,onlatest=false
+          flavor: latest=false
           tags: |
-            type=semver,pattern={{major}},value=${{ inputs.version }}
-            type=semver,pattern={{major}}.{{minor}},value=${{ inputs.version }}
-            type=semver,pattern={{version}},value=${{ inputs.version }}
-            type=ref,event=branch,enable=${{ inputs.version == '' }},prefix=
+            type=ref,event=pr,enable=${{ inputs.version != '' }}
+            type=ref,event=branch,enable=${{ inputs.version == '' }}
 
       - name: Log in to GHCR
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
@@ -199,6 +174,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Assemble and push the index
+        id: assemble
         working-directory: ${{ runner.temp }}/digests
         env:
           IMAGE: ${{ steps.image.outputs.image }}
@@ -216,15 +192,25 @@ jobs:
             "${tags[@]/#/--tag=}" \
             "${sources[@]}"
 
+          echo "tag=${tags[0]}" >> "${GITHUB_OUTPUT}"
+
       - name: Capture index digest
         id: index
-        if: ${{ inputs.version != '' }}
         env:
-          IMAGE: ${{ steps.image.outputs.image }}
-          VERSION: ${{ inputs.version }}
+          TAG: ${{ steps.assemble.outputs.tag }}
         run: |
           set -euo pipefail
 
-          digest=$(docker buildx imagetools inspect "${IMAGE}:v${VERSION}" \
+          digest=$(docker buildx imagetools inspect "${TAG}" \
             --format '{{.Manifest.Digest}}')
           echo "digest=${digest}" >> "${GITHUB_OUTPUT}"
+
+      # A release version is set only for release candidates; branch images
+      # leave it empty and stay out of the public transparency log.
+      - name: Attest the index
+        if: ${{ inputs.version != '' }}
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        with:
+          subject-name: ${{ steps.image.outputs.image }}
+          subject-digest: ${{ steps.index.outputs.digest }}
+          push-to-registry: true
