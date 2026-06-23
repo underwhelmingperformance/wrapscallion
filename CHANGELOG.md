@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.1](https://github.com/underwhelmingperformance/wrapscallion/compare/v0.2.0...v0.2.1) (2026-06-23)
+
+
+### Bug Fixes
+
+* animate the progress spinner on a terminal ([#25](https://github.com/underwhelmingperformance/wrapscallion/issues/25)) ([9a271f9](https://github.com/underwhelmingperformance/wrapscallion/commit/9a271f9973eb79acee3b499d4cc6e7b575078dad))
+* **release:** land release tags on a reachable commit ([#26](https://github.com/underwhelmingperformance/wrapscallion/issues/26)) ([4ecf101](https://github.com/underwhelmingperformance/wrapscallion/commit/4ecf101fbef1adc11e9ffff41c6eaa26a96d7e8e))
+* render the readable report under pre-commit ([#24](https://github.com/underwhelmingperformance/wrapscallion/issues/24)) ([7ba124d](https://github.com/underwhelmingperformance/wrapscallion/commit/7ba124d6c97174762c71537b578d36342e7cee34))
+
 ## [0.2.0](https://github.com/underwhelmingperformance/wrapscallion/compare/v0.1.0...v0.2.0) (2026-06-18)
 
 
