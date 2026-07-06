@@ -6,8 +6,8 @@
 		".": "./src/main.ts"
 	},
 	"imports": {
-		"@commitlint/config-conventional": "npm:@commitlint/config-conventional@21.0.2",
-		"@commitlint/lint": "npm:@commitlint/lint@21.0.2",
+		"@commitlint/config-conventional": "npm:@commitlint/config-conventional@21.2.0",
+		"@commitlint/lint": "npm:@commitlint/lint@21.2.0",
 		"@cto.af/linewrap": "npm:@cto.af/linewrap@4.0.1",
 		"@cto.af/string-width": "npm:@cto.af/string-width@5.0.1",
 		"@std/assert": "jsr:@std/assert@1.0.19",
