@@ -66,6 +66,65 @@ Deno.test('rewordCommitMessages rewrites a fixable commit and moves the branch',
 	}
 });
 
+Deno.test('rewordCommitMessages rewords from a linked worktree', async () => {
+	const repository = await createTempRepository();
+	const linkedParent = await Deno.makeTempDir({
+		prefix: 'wrapscallion-reword-linked-',
+	});
+	const linkedDirectory = `${linkedParent}/worktree`;
+
+	try {
+		const addWorktree = ['worktree add', linkedDirectory, '-b work'].join(' ');
+		const added = await repository.git.exec(addWorktree);
+		assertEquals(added.exitCode, 0);
+
+		const linkedGit = createGit({
+			cwd: linkedDirectory,
+			fs: new NodeFileSystem(),
+		});
+		const linkedRepo = await linkedGit.findRepo();
+
+		if (linkedRepo === null) {
+			throw new Error('failed to resolve the linked worktree');
+		}
+
+		const checks = await checkCommitMessages(
+			await readRangeCommitMessages(linkedRepo, repository.base, 'HEAD'),
+		);
+
+		const result = await rewordCommitMessages(
+			{
+				dryRun: false,
+				from: repository.base,
+				kind: 'range',
+				reword: true,
+				to: 'HEAD',
+			},
+			checks,
+			linkedGit,
+		);
+
+		const movedHead = await resolveRef(linkedRepo, 'refs/heads/work');
+
+		assertEquals({
+			branchAtNewHead: result.outcome === 'unchanged'
+				? null
+				: movedHead === result.newHead,
+			outcome: result.outcome,
+			signaturesDropped: result.rewritten.map((commit) =>
+				commit.signatureDropped
+			),
+		}, {
+			branchAtNewHead: true,
+			outcome: 'applied',
+			signaturesDropped: [false],
+		});
+	} finally {
+		await Deno.remove(repository.directory, { recursive: true });
+		await Deno.remove(linkedParent, { recursive: true });
+	}
+});
+
 Deno.test('rewordCommitMessages rejects an unborn HEAD', async () => {
 	const directory = await Deno.makeTempDir({ prefix: 'wrapscallion-reword-' });
 	const git = createGit({ cwd: directory, fs: new NodeFileSystem() });

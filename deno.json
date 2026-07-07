@@ -16,7 +16,7 @@
 		"commander": "npm:commander@15.0.0",
 		"conventional-changelog-conventionalcommits": "npm:conventional-changelog-conventionalcommits@9.3.1",
 		"diff": "npm:diff@9.0.0",
-		"just-git": "npm:just-git@1.7.1",
+		"just-git": "npm:just-git@1.8.0",
 		"markdownlint": "npm:markdownlint@0.40.0",
 		"markdownlint/promise": "npm:markdownlint@0.40.0/promise",
 		"micromark": "npm:micromark@4.0.2",
