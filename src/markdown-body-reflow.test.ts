@@ -372,6 +372,49 @@ Deno.test('MarkdownBodyReflower uses display width for wide characters', () => {
 	});
 });
 
+Deno.test(
+	'MarkdownBodyReflower leaves trailer blocks stranded mid-body unwrapped',
+	() => {
+		const body = [
+			'Explain the change.',
+			'',
+			'Co-Authored-By: Alice Example <alice@example.com>',
+			'Session: https://example.com/sessions/01JKJAs1YpYdikajUt8tT8Mr',
+			'',
+			'---------',
+			'',
+		].join('\n');
+
+		assertEquals(reflowSummary(reflower.reflow(body)), {
+			changed: false,
+			original: body,
+			reflowed: body,
+		});
+	},
+);
+
+Deno.test(
+	'MarkdownBodyReflower rewraps prose paragraphs that merely start like a trailer',
+	() => {
+		const body = [
+			'Warning: this paragraph merely starts like a trailer and it needs the',
+			'reflower to keep treating it as prose because its second line is ordinary text.',
+			'',
+		].join('\n');
+
+		assertEquals(reflowSummary(reflower.reflow(body)), {
+			changed: true,
+			original: body,
+			reflowed: [
+				'Warning: this paragraph merely starts like a trailer and it needs the',
+				'reflower to keep treating it as prose because its second line is',
+				'ordinary text.',
+				'',
+			].join('\n'),
+		});
+	},
+);
+
 Deno.test('MarkdownBodyReflower leaves hard-break paragraphs unchanged', () => {
 	const body = [
 		'First line with a Markdown hard break  ',

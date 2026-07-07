@@ -375,6 +375,57 @@ Deno.test('checkCommitMessages does not reflow git trailers into the body', asyn
 });
 
 Deno.test(
+	'checkCommitMessages keeps trailers a squash merge strands mid-body intact',
+	async () => {
+		const [check] = await checkCommitMessages([
+			commitMessage(
+				'3c061ed4571d',
+				[
+					'chore(deps): update dependency conventional-changelog-conventionalcommits to v10 (#35)',
+					'',
+					'* chore(deps): update dependency conventional-changelog-conventionalcommits to v10',
+					'',
+					'* fix: restore preset parser opts type for v10',
+					'',
+					'Co-Authored-By: Alice Example <alice@example.com>',
+					'Session: https://example.com/sessions/01JKJAs1YpYdikajUt8tT8Mr',
+					'',
+					'---------',
+					'',
+					'Co-authored-by: somebot[bot] <12345678+somebot[bot]@users.noreply.github.com>',
+					'Co-authored-by: Alice Example <alice@example.com>',
+				].join('\n'),
+			),
+		]);
+
+		assertEquals({
+			changed: check?.changed,
+			fixedMessage: check?.fixedMessage,
+			status: check?.status,
+		}, {
+			changed: true,
+			fixedMessage: [
+				'chore(deps): update dependency conventional-changelog-conventionalcommits to v10 (#35)',
+				'',
+				'* chore(deps): update dependency',
+				'  conventional-changelog-conventionalcommits to v10',
+				'',
+				'* fix: restore preset parser opts type for v10',
+				'',
+				'Co-Authored-By: Alice Example <alice@example.com>',
+				'Session: https://example.com/sessions/01JKJAs1YpYdikajUt8tT8Mr',
+				'',
+				'---------',
+				'',
+				'Co-authored-by: somebot[bot] <12345678+somebot[bot]@users.noreply.github.com>',
+				'Co-authored-by: Alice Example <alice@example.com>',
+			].join('\n'),
+			status: 'fixable',
+		});
+	},
+);
+
+Deno.test(
 	'checkCommitMessages exempts unknown trailer-like final blocks from body checks',
 	async () => {
 		const reports = await checkCommitMessages([

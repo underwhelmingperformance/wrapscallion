@@ -3,7 +3,7 @@ import { StringWidth } from '@cto.af/string-width';
 import { parse, postprocess, preprocess } from 'micromark';
 import { gfm } from 'micromark-extension-gfm';
 
-import { normaliseLineEndings } from './message.ts';
+import { isTrailerBlock, normaliseLineEndings } from './message.ts';
 
 const reflowWidth = 72;
 const placeholderStart = 57_344;
@@ -96,6 +96,13 @@ export class MarkdownBodyReflower {
 			paragraph.startLine - 1,
 			paragraph.endLine,
 		);
+
+		// A paragraph git would read as a trailer block — for example an inner
+		// commit's trailers stranded mid-body by a squash merge — is metadata,
+		// not prose, so joining or rewrapping its lines would corrupt it.
+		if (isTrailerBlock(physicalLines)) {
+			return undefined;
+		}
 
 		if (
 			physicalLines.slice(0, -1).some((line) => /(?: {2,}|\\)$/u.test(line))

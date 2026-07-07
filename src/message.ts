@@ -164,7 +164,14 @@ function containsRecognisedTrailer(lines: readonly string[]): boolean {
 	return lines.some((line) => isGitGeneratedTrailer(line));
 }
 
-function isTrailerBlock(lines: readonly string[]): boolean {
+/**
+ * Whether every line is a trailer, or a folded continuation of one. Beyond
+ * locating the final trailer block, this lets the reflower recognise a
+ * trailer run stranded mid-body — as a squash merge does when it stacks an
+ * inner commit's trailers above its `---------` separator — so the run is
+ * never rewrapped as prose.
+ */
+export function isTrailerBlock(lines: readonly string[]): boolean {
 	let sawTrailer = false;
 
 	for (const line of lines) {
