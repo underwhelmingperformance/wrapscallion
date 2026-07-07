@@ -9,6 +9,15 @@ import { MarkdownBodyReflower } from './markdown-body-reflow.ts';
 import { CommitMessageDocument } from './message.ts';
 
 /**
+ * The preset still returns `{ parser, writer, ... }` at runtime, but its v10
+ * type declaration annotates the return value as `{}`, dropping the `parser`
+ * property from the type. Augment the default export to restore it.
+ */
+declare module 'conventional-changelog-conventionalcommits' {
+	export default function createPreset(): { parser: CommitlintParserOptions };
+}
+
+/**
  * A commit message with the display metadata needed to report failures for one
  * commit without mixing the result with other commits in the same range. An
  * edit-mode message read from a file has no hash; a range-mode message walked
