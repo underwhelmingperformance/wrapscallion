@@ -14,7 +14,7 @@
 		"@std/cli/unstable-spinner": "jsr:@std/cli@1.0.30/unstable-spinner",
 		"@std/toml": "jsr:@std/toml@1.0.11",
 		"commander": "npm:commander@15.0.0",
-		"conventional-changelog-conventionalcommits": "npm:conventional-changelog-conventionalcommits@9.3.1",
+		"conventional-changelog-conventionalcommits": "npm:conventional-changelog-conventionalcommits@10.2.0",
 		"diff": "npm:diff@9.0.0",
 		"just-git": "npm:just-git@1.8.0",
 		"markdownlint": "npm:markdownlint@0.40.0",
