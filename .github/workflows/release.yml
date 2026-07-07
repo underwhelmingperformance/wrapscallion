@@ -275,12 +275,17 @@ jobs:
   prepare:
     name: prepare
     # Only the merged release-please pull request reaches the rest of the flow.
-    # release-please labels it "autorelease: pending"; an ordinary merge has no
-    # such label and is ignored.
+    # release-please labels it "autorelease: pending", but anyone with triage
+    # access can apply labels, so the label alone does not identify it. The
+    # same-repo, author and branch checks from prepare-pin pick out the bot's
+    # release pull request and no other.
     if: >-
       github.event_name == 'pull_request' &&
       github.event.pull_request.merged == true &&
-      contains(github.event.pull_request.labels.*.name, 'autorelease: pending')
+      contains(github.event.pull_request.labels.*.name, 'autorelease: pending') &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login == 'github-actions[bot]' &&
+      github.event.pull_request.head.ref == 'release-please--branches--main'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
