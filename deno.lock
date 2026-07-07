@@ -14,7 +14,7 @@
     "npm:commander@15.0.0": "15.0.0",
     "npm:conventional-changelog-conventionalcommits@9.3.1": "9.3.1",
     "npm:diff@9.0.0": "9.0.0",
-    "npm:just-git@1.7.1": "1.7.1",
+    "npm:just-git@1.8.0": "1.8.0",
     "npm:markdownlint@0.40.0": "0.40.0",
     "npm:micromark-extension-gfm@3.0.0": "3.0.0",
     "npm:micromark@4.0.2": "4.0.2",
@@ -269,8 +269,8 @@
     "is-obj@2.0.0": {
       "integrity": "sha512-drqDG3cbczxxEJRoOXcOjtdp1J/lyp1mNn0xaznRs8+muBhgQcrnbspox5X5fOw0HnMnbfDzvnEMEtqDEJEo8w=="
     },
-    "just-git@1.7.1": {
-      "integrity": "sha512-XAxD3x+8aSo8Kx62pkcj3Jzmhw2I4mhw1xvqTNbpVcTFUMIZKak5W00hVM7/LywUFLfMj+7Riu8cEcn8JnEHHw=="
+    "just-git@1.8.0": {
+      "integrity": "sha512-c/F42fi9Kq7fhlGGENzVpMGFmjN9WJMrp6SuTMyGnllsrLDUNUCh4K5RdTPAjiRe+WhdCoDPpLJeK5lUY7C/dQ=="
     },
     "katex@0.16.47": {
       "integrity": "sha512-Eeo8Ys1doU1z+x8AZsPpQu+p/QcZBI5PeOo7QGQdy2x2m0MU/hYagBbGOmXwr5KVbEfVuWv9LpnQWeehogurjg==",
@@ -606,7 +606,7 @@
       "npm:commander@15.0.0",
       "npm:conventional-changelog-conventionalcommits@9.3.1",
       "npm:diff@9.0.0",
-      "npm:just-git@1.7.1",
+      "npm:just-git@1.8.0",
       "npm:markdownlint@0.40.0",
       "npm:micromark-extension-gfm@3.0.0",
       "npm:micromark@4.0.2",
