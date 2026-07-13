@@ -71,11 +71,43 @@ export function commitSubject(message: string): string {
 }
 
 export function stripCommitMessageComments(message: string): string {
-	return normaliseLineEndings(message)
+	return truncateBeforeScissors(normaliseLineEndings(message))
 		.split('\n')
 		.filter((line) => !line.startsWith('#'))
 		.join('\n')
 		.trimEnd();
+}
+
+/**
+ * `git commit -v` appends the staged diff below a scissors line, and the diff
+ * is still present when the commit-msg hook runs. Its lines are not comment
+ * prefixed, so dropping `#` lines alone would fold the diff into the body.
+ * Mirror git's own truncation by discarding the scissors line and everything
+ * after it.
+ */
+const scissorsCutLine = '------------------------ >8 ------------------------';
+
+function truncateBeforeScissors(message: string): string {
+	const lines = message.split('\n');
+	const scissorsIndex = lines.findIndex(isScissorsLine);
+
+	if (scissorsIndex === -1) {
+		return message;
+	}
+
+	return lines.slice(0, scissorsIndex).join('\n');
+}
+
+function isScissorsLine(line: string): boolean {
+	const marker = ` ${scissorsCutLine}`;
+
+	if (!line.endsWith(marker)) {
+		return false;
+	}
+
+	const prefix = line.slice(0, -marker.length);
+
+	return prefix.length > 0 && !/\s/u.test(prefix);
 }
 
 /**
