@@ -122,7 +122,7 @@ jobs:
           yq --inplace '
             (.[] | select(.id == "wrapscallion")) |= (
               .language = "docker_image" |
-              .entry = strenv(IMAGE) + "@" + strenv(DIGEST) + " --output-format json --edit"
+              .entry = strenv(IMAGE) + "@" + strenv(DIGEST) + " --output-format terminal --edit"
             )
           ' .pre-commit-hooks.yaml
 

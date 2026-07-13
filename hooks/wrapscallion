@@ -19,5 +19,6 @@ exec deno run \
 	--allow-read \
 	--allow-env \
 	"$project_dir/src/main.ts" \
+	--output-format terminal \
 	--edit \
 	"$@"
