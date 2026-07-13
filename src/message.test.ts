@@ -41,6 +41,38 @@ Deno.test('stripCommitMessageComments drops comment lines and trailing blanks', 
 	);
 });
 
+Deno.test('stripCommitMessageComments truncates the scissors line and the verbose diff below it', () => {
+	const input = [
+		'chore(gitignore): add .env.* to .gitignore',
+		'',
+		'This is going to contain an OpenRouter API key.',
+		'',
+		'# Please enter the commit message for your changes. Lines starting',
+		"# with '#' will be ignored, and an empty message aborts the commit.",
+		'#',
+		'# ------------------------ >8 ------------------------',
+		'# Do not modify or remove the line above.',
+		'# Everything below it will be ignored.',
+		'diff --git a/.gitignore b/.gitignore',
+		'index 9e60b52..e0e3ca4 100644',
+		'--- a/.gitignore',
+		'+++ b/.gitignore',
+		'@@ -24,3 +24,6 @@ vite.config.ts.timestamp-*',
+		' # Playwright',
+		' test-results',
+		' .playwright-mcp',
+		'+',
+		'+# Secrets',
+		'+.env.*',
+		'',
+	].join('\n');
+
+	assertEquals(
+		stripCommitMessageComments(input),
+		'chore(gitignore): add .env.* to .gitignore\n\nThis is going to contain an OpenRouter API key.',
+	);
+});
+
 Deno.test('CommitMessageDocument keeps a BREAKING CHANGE footer out of the body', () => {
 	const footers = ['BREAKING CHANGE', 'BREAKING-CHANGE'];
 
