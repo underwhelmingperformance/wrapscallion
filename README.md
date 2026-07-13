@@ -133,6 +133,10 @@ repos:
 
 <!-- x-release-please-end -->
 
+Both hooks print the human-readable `terminal` report so a failing commit shows
+the offending rule and body diff directly in pre-commit's output rather than the
+machine-readable JSON.
+
 For a faster local hook on machines that already have Deno installed, use
 `wrapscallion-system` instead.
 
