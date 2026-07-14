@@ -12,7 +12,7 @@ RUN deno compile \
 	--output /usr/local/bin/wrapscallion \
 	src/main.ts
 
-FROM gcr.io/distroless/cc-debian12@sha256:a90cf0f046efb32466b38b0972fef3a95e7c580e392e79ff1b7ac08c15fed0bc
+FROM gcr.io/distroless/cc-debian12@sha256:7ee09f36862efbdbf70422db263e411c2618409ca46faa555bd5b636155307df
 
 COPY --from=build /usr/local/bin/wrapscallion /usr/local/bin/wrapscallion
 
