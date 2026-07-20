@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.2](https://github.com/underwhelmingperformance/wrapscallion/compare/v0.2.1...v0.2.2) (2026-07-20)
+
+
+### Bug Fixes
+
+* **edit:** drop the verbose diff below the scissors line ([ccb12e0](https://github.com/underwhelmingperformance/wrapscallion/commit/ccb12e0a434ec75f066d61a62d2e1e38e60c579d))
+* **hooks:** print the readable report from the pre-commit hooks ([8730648](https://github.com/underwhelmingperformance/wrapscallion/commit/873064890d79399173aa48b2079c88484b5b1709))
+* leave mid-body trailer blocks unwrapped ([ae4179d](https://github.com/underwhelmingperformance/wrapscallion/commit/ae4179d4d3908a5bc5db20dabcf10e750685bb0c))
+* **reword:** support running inside a linked worktree ([#36](https://github.com/underwhelmingperformance/wrapscallion/issues/36)) ([644b538](https://github.com/underwhelmingperformance/wrapscallion/commit/644b53893bddb24190767038301bdebb449cca40))
+
 ## [0.2.1](https://github.com/underwhelmingperformance/wrapscallion/compare/v0.2.0...v0.2.1) (2026-06-23)
 
 
