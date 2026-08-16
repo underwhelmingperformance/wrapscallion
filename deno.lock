@@ -6,8 +6,8 @@
     "jsr:@std/collections@^1.1.3": "1.3.0",
     "jsr:@std/internal@^1.0.12": "1.0.14",
     "jsr:@std/toml@1.0.11": "1.0.11",
-    "npm:@commitlint/config-conventional@21.2.0": "21.2.0",
-    "npm:@commitlint/lint@21.2.0": "21.2.0",
+    "npm:@commitlint/config-conventional@21.2.2": "21.2.2",
+    "npm:@commitlint/lint@21.2.2": "21.2.2",
     "npm:@cto.af/linewrap@4.0.1": "4.0.1",
     "npm:@cto.af/string-width@5.0.1": "5.0.1",
     "npm:commander@15.0.0": "15.0.0",
@@ -44,8 +44,8 @@
     }
   },
   "npm": {
-    "@commitlint/config-conventional@21.2.0": {
-      "integrity": "sha512-Qf8WRDVcyVd14if6VTWenebxFbKnVnbzPUJjlzjkyJGeHK2xCGd63Dr1XZzj0plXKQb9P0BfOxoc1HVeCo2BWQ==",
+    "@commitlint/config-conventional@21.2.2": {
+      "integrity": "sha512-NxA37SZviusFUEYOQZ5hNnZ1h7O/KiemPkxjOlpzKJNnWxThiwc6/SaZhaPa8fyLvfRBAywhQhJJk8XESHWlpQ==",
       "dependencies": [
         "@commitlint/types",
         "conventional-changelog-conventionalcommits"
@@ -58,15 +58,15 @@
         "es-toolkit"
       ]
     },
-    "@commitlint/is-ignored@21.2.0": {
-      "integrity": "sha512-4/eB0vBN7L88O/oC4ajAEqi7j2ZfNgxl/+11RfAV9YosejZgDXhY2C9VcHnHJhOzPLoSy5P3Mg/46kqeyJfXKw==",
+    "@commitlint/is-ignored@21.2.2": {
+      "integrity": "sha512-9UoKNgfFE3LU7FrzierCvk3CdDfMDeVGC86qZiT/n0TIjfq/dmZ9MHuXd45OTNRa26ZanmJRxEtmiXk/lEJihg==",
       "dependencies": [
         "@commitlint/types",
         "semver"
       ]
     },
-    "@commitlint/lint@21.2.0": {
-      "integrity": "sha512-ceO5dp9pLjEZ6y6qbq/uXWXDPykqqlTsyzoQ0NzecpisSJhK3kTy9qzQoPeJuWG/IMNdV1lO0RgmzqoAlSi1uw==",
+    "@commitlint/lint@21.2.2": {
+      "integrity": "sha512-Fy8JxEBzdmsYWFude/61GxXu5O+wEymwiRK2z9GL9R8mCsXphCoGxAFc5iHn5mjlfcSrhiiONE+ksf4KOjnaPg==",
       "dependencies": [
         "@commitlint/is-ignored",
         "@commitlint/parse",
@@ -77,16 +77,16 @@
     "@commitlint/message@21.2.0": {
       "integrity": "sha512-YxGoiXD/HXNXLJPrQwE5poXa+XH0CBEm+mdvbHQP0g6MV/dmJyUFCzPNzZbxL93GvZ70TmtTK0Z0/IBpAqHv8g=="
     },
-    "@commitlint/parse@21.2.0": {
-      "integrity": "sha512-QHWxG4d0PLTF634/AdyZ0MQS+CLn5YOuJlCFhMMlSGKFxzYGUetkHBj18xgBD+6fVzUrA2lrCdi/vlS2f/oYXg==",
+    "@commitlint/parse@21.2.2": {
+      "integrity": "sha512-MEkobPfvRp+z06Wro8HMG1BDGHzZmj82A1LH1nWeG3ipHpg/x4m6v3wEDvMBIKjRFUnfR3nBeFs3MVCr7UdAmg==",
       "dependencies": [
         "@commitlint/types",
         "conventional-changelog-angular",
         "conventional-commits-parser"
       ]
     },
-    "@commitlint/rules@21.2.0": {
-      "integrity": "sha512-C2yXMNpiB8ETZKfx5JD8+ExgF8vTU1VQMKPSUUYwqKpw9oJWQBrlXBpdU038mj2WPjof7o9UzFpmTyBeGMZwZg==",
+    "@commitlint/rules@21.2.2": {
+      "integrity": "sha512-eplQzyYkBjYB1HyyRj8hkcK11Y9DU9nuBz7uOKEd6NpE9NGDytLFCAnlRE+OoiK/5sHEJsaz2RGhuWBvYzIbNA==",
       "dependencies": [
         "@commitlint/ensure",
         "@commitlint/message",
@@ -104,8 +104,8 @@
         "picocolors"
       ]
     },
-    "@conventional-changelog/template@1.2.1": {
-      "integrity": "sha512-TzlTVpKPjaqW6qOYjQcYUDuGsLCNsvFHVBXkYGTAnf5V37jCWrE5haKNXzz0WZUtVHjrpV76L1buANjwXMfT8w=="
+    "@conventional-changelog/template@1.3.0": {
+      "integrity": "sha512-GsCw/qu92GI0EX6s7fxUi/SG1lmFjG9XZivxxEDZXqztuQKCn5o5wKdz4v005zci0Md7EZzgAwmQLoIEDZoaow=="
     },
     "@cto.af/linebreak@4.0.3": {
       "integrity": "sha512-GiyepYtGQMo4LDynuhyFr0/hBGv0SFNVKnPjHuhFMnkseCBCIMecaCkKL8V3cu9mRas1djpSWznxigw/irV5Lw==",
@@ -173,8 +173,8 @@
     "commander@8.3.0": {
       "integrity": "sha512-OkTL9umf+He2DZkUq8f8J9of7yL6RJKI24dVITBmNfZBmri9zYZQrKkuXiKhyfPSu8tUhnVBB1iKXevvnlR4Ww=="
     },
-    "conventional-changelog-angular@9.2.1": {
-      "integrity": "sha512-oWSL6ZhnXbYraOFTK3PgRAQJ8fADDAEv5K6AdeyQPLvjFmhG8+ejL0jZZp/R7vTmGJaBvZEE+sE7dB4bCv7sAw==",
+    "conventional-changelog-angular@9.3.0": {
+      "integrity": "sha512-0MWQLVUT1oVCsUGs9aAWteBVxPlLwJTn5VbQH7B0B3fDizZgrJ9QGnKl/2mp1+5P7153GCBCjO/v1aKJ6eysCg==",
       "dependencies": [
         "@conventional-changelog/template"
       ]
@@ -569,8 +569,8 @@
       "jsr:@std/assert@1.0.19",
       "jsr:@std/cli@1.0.30",
       "jsr:@std/toml@1.0.11",
-      "npm:@commitlint/config-conventional@21.2.0",
-      "npm:@commitlint/lint@21.2.0",
+      "npm:@commitlint/config-conventional@21.2.2",
+      "npm:@commitlint/lint@21.2.2",
       "npm:@cto.af/linewrap@4.0.1",
       "npm:@cto.af/string-width@5.0.1",
       "npm:commander@15.0.0",
