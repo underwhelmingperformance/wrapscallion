@@ -15,19 +15,20 @@ jobs:
   release-please:
     name: release-please
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write # push the release branch and its commits
-      pull-requests: write # open and update the release pull request
-      issues: write # label the release pull request
     steps:
-      # release-please runs as the default GITHUB_TOKEN, so the pull request it
-      # opens does not itself trigger the required checks. It opens the pull
-      # request as a draft; marking it ready for review is a human action that
-      # does trigger them (the checks listen for ready_for_review). The commits
-      # release-please makes through the API are still signed and verified.
+      - id: generate-github-app-token
+        name: Generate GitHub App token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.SHIPPEROFBYTES_CLIENT_ID }}
+          private-key: ${{ secrets.SHIPPEROFBYTES_PRIVATE_KEY }}
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+
       - name: Maintain the release pull request
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.generate-github-app-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json

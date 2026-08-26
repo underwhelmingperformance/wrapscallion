@@ -6,7 +6,6 @@ on:
       - opened
       - synchronize
       - reopened
-      - ready_for_review
   merge_group:
   push:
     branches:
@@ -67,6 +66,7 @@ jobs:
       packages: write # push the branch-tagged image and index to GHCR
       id-token: write # OIDC for the release-index provenance attestation
       attestations: write # write the release-index provenance attestation
+      artifact-metadata: write # record the attested release index
     uses: ./.github/workflows/build.yml
     with:
       push: true

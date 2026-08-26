@@ -7,6 +7,10 @@ inputs:
   platform:
     description: Target platform, for example linux/amd64.
     required: true
+  source-date-epoch:
+    description: Unix timestamp used for reproducible build timestamps.
+    required: false
+    default: '0'
 
 runs:
   using: composite
@@ -18,6 +22,8 @@ runs:
       with:
         context: .
         platforms: ${{ inputs.platform }}
+        build-args: |
+          SOURCE_DATE_EPOCH=${{ inputs.source-date-epoch }}
         provenance: false
         sbom: false
         load: true
