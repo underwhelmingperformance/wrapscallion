@@ -4,5 +4,10 @@ root = true
 end_of_line = lf
 insert_final_newline = true
 
+# deno fmt owns the TypeScript and JSON files and indents them with tabs.
+[*.{yml,yaml}]
+indent_style = space
+
 [*.md]
+indent_style = space
 max_line_length = 80
