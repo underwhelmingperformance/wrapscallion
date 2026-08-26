@@ -3,23 +3,24 @@ name: release
 # release-please keeps a release pull request up to date that bumps the version
 # in deno.json and the pinned examples in the README. The release image pins the
 # pre-commit hook to a published, attested image by digest, but that digest is
-# only known after a build, so it cannot come from release-please itself. The
-# flow therefore spans four events:
+# only known after a build. The flow therefore spans four stages:
 #
-#   * ready_for_review: build and push the image, attest it, and commit the
-#     digest pin onto the release branch so it lands in the commit that merges;
-#   * merge_group: refuse the merge if a co-queued change moved the build inputs
-#     out from under the pinned digest;
-#   * closed (merged): draft the release with its notes and standalone binaries;
-#   * published: publishing the draft makes GitHub create the vX.Y.Z tag on the
-#     merge commit -- an ancestor of main, which is how release-please finds the
-#     previous release -- after which we clear the pending label so release-please
-#     opens the next release pull request.
+#   * opened, synchronize or reopened: build and push the image, attest it, and
+#     commit the digest pin onto the release branch. The pin commit's own
+#     synchronize run recognises it and skips the build, so pinning terminates;
+#   * merge_group: refuse the merge unless the merging tree is exactly the tree
+#     the pinned digest was built from;
+#   * closed (merged): assemble the release, promote the image digest to its
+#     release tags, and publish the immutable GitHub release;
+#   * published: clear the pending label so release-please can open the next
+#     release pull request.
 
 on:
   pull_request:
     types:
-      - ready_for_review
+      - opened
+      - synchronize
+      - reopened
       - closed
   merge_group:
   release:
@@ -28,36 +29,46 @@ on:
 
 permissions: {}
 
+# GitHub replaces a pending run when another run enters its concurrency group,
+# so merge-queue and publish runs need groups of their own: in a shared group,
+# any pull request push while a pin build is running would cancel them. Runs
+# for one pull request still serialise with each other and with its merged
+# release run.
 concurrency:
-  group: release
+  group: release-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: false
 
 jobs:
   prepare-pin:
     name: prepare pin
-    # Only the release-please bot's pull request, from this repository, carries
-    # the pin. The same-repo and author checks keep a fork's or a look-alike
-    # branch's code out of this write-privileged flow. The author is the bot
-    # because release-please opens the pull request with the GITHUB_TOKEN.
+    # Only the release App's pull request, from this repository, carries the pin.
+    # The same-repo and author checks keep a fork's or a look-alike branch's code
+    # out of this write-privileged flow.
     if: >-
       github.event_name == 'pull_request' &&
-      github.event.action == 'ready_for_review' &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.draft == false &&
       github.event.pull_request.head.repo.full_name == github.repository &&
-      github.event.pull_request.user.login == 'github-actions[bot]' &&
+      github.event.pull_request.user.login == 'shipperofbytes[bot]' &&
       github.event.pull_request.head.ref == 'release-please--branches--main'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
     outputs:
-      version: ${{ steps.version.outputs.version }}
+      pinned: ${{ steps.release.outputs.pinned }}
+      version: ${{ steps.release.outputs.version }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
+          # The pin detection below diffs HEAD against its parent.
+          fetch-depth: 2
           persist-credentials: false
 
-      - name: Read the released version
-        id: version
+      - name: Read the release inputs
+        id: release
+        env:
+          OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
 
@@ -68,31 +79,52 @@ jobs:
             exit 1
           fi
 
-          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          # A well-formed pin whose commit touched nothing else is this
+          # workflow's own pin commit, so the digest it records was built from
+          # this tree and the pinning is done. Rebuilding here would use the
+          # pin commit's own timestamp as the source date epoch, produce a new
+          # digest, and pin again, without end.
+          image="ghcr.io/${OWNER,,}/wrapscallion"
+          entry=$(yq -r '.[] | select(.id == "wrapscallion") | .entry' \
+            .pre-commit-hooks.yaml)
+          changed=$(git diff --name-only 'HEAD~1..HEAD')
+
+          pinned=false
+          if [[ "${changed}" == '.pre-commit-hooks.yaml' &&
+            "${entry}" =~ ^"${image}@sha256:"[0-9a-f]{64}' --output-format terminal --edit'$ ]]; then
+            pinned=true
+          fi
+
+          {
+            echo "pinned=${pinned}"
+            echo "version=${version}"
+          } >> "${GITHUB_OUTPUT}"
 
   pin-build:
     name: pin build
     needs: prepare-pin
+    if: ${{ needs.prepare-pin.outputs.pinned != 'true' }}
     permissions:
       contents: read # check out the source to build the image
       packages: write # push the per-arch images and index to GHCR
       id-token: write # OIDC for the image provenance attestation
       attestations: write # write the image provenance attestation
+      artifact-metadata: write # record the attested image index
     # Publish the index now, under a candidate pr-<number> tag, so the digest the
     # pin records is a real, pullable, attested image. The release applies the
     # semver tags to this same digest once it is on main.
     uses: ./.github/workflows/build.yml
     with:
       push: true
-      version: ${{ needs.prepare-pin.outputs.version }}
       ref: ${{ github.event.pull_request.head.sha }}
+      version: ${{ needs.prepare-pin.outputs.version }}
 
   pin-commit:
     name: pin commit
     needs: [prepare-pin, pin-build]
     runs-on: ubuntu-24.04
     permissions:
-      contents: write # commit the pin onto the release branch
+      contents: read # check out the release branch
     env:
       BRANCH: ${{ github.event.pull_request.head.ref }}
       DIGEST: ${{ needs.pin-build.outputs.digest }}
@@ -102,8 +134,8 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
-          # Check out the exact commit the pin is built from, so the committed
-          # tree matches the built tree.
+          # Check out the branch commit that requested the build. The API update
+          # below refuses to overwrite a newer release-please update.
           ref: ${{ env.SHA }}
           persist-credentials: false
 
@@ -128,18 +160,39 @@ jobs:
 
           deno fmt .pre-commit-hooks.yaml
 
-          # A re-run of ready_for_review pins the same digest and has nothing to
-          # commit.
+          entry=$(yq -r '.[] | select(.id == "wrapscallion") | .entry' \
+            .pre-commit-hooks.yaml)
+          expected="${IMAGE}@${DIGEST} --output-format terminal --edit"
+
+          # yq exits zero when its selector matches nothing, so check that the
+          # patch actually landed rather than committing an unpinned manifest.
+          if [[ "${entry}" != "${expected}" ]]; then
+            echo "failed to pin the hook: entry is '${entry}', wanted '${expected}'" >&2
+            exit 1
+          fi
+
+          # A re-run of the same commit rebuilds from the same tree and epoch,
+          # reproduces the digest, and so has nothing to commit.
           if git diff --quiet -- .pre-commit-hooks.yaml; then
             echo "changed=false" >> "${GITHUB_OUTPUT}"
           else
             echo "changed=true" >> "${GITHUB_OUTPUT}"
           fi
 
+      - id: generate-github-app-token
+        if: ${{ steps.pin.outputs.changed == 'true' }}
+        name: Generate GitHub App token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.SHIPPEROFBYTES_CLIENT_ID }}
+          private-key: ${{ secrets.SHIPPEROFBYTES_PRIVATE_KEY }}
+          permission-contents: write
+
       - name: Commit the pin
         if: ${{ steps.pin.outputs.changed == 'true' }}
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
+          github-token: ${{ steps.generate-github-app-token.outputs.token }}
           script: |
             const fs = require("fs");
             const { owner, repo } = context.repo;
@@ -176,13 +229,10 @@ jobs:
               parents: [baseSha],
             });
 
-            // force: false keeps this a fast-forward: the pin lands only while
-            // the branch still points at the built commit, so the committed tree
-            // stays equal to the built one. GitHub signs the commit it creates.
-            //
-            // Moving the branch raises a pull_request synchronize event. Because
-            // a GITHUB_TOKEN raised it, its checks start in an approval-required
-            // state, so a maintainer releases them with one click before merging.
+            // force: false keeps this a fast-forward. The pin lands only while
+            // the branch still points at the built commit. Moving the branch with
+            // the App token raises a synchronize event, whose run recognises the
+            // pin and skips the build.
             await github.rest.git.updateRef({
               owner,
               repo,
@@ -193,21 +243,31 @@ jobs:
 
   guard:
     name: guard
-    # The merge queue's required check. The pin was built from the release pull
-    # request's tree; if a co-queued change alters a build input, the pinned
-    # digest no longer describes the source that merges, so block it.
-    if: github.event_name == 'merge_group'
+    # The merge queue's required check. The pinned digest describes exactly the
+    # release pull request's tree, so that tree must be what merges: the guard
+    # refuses a merge group whose tree differs, which means the release merges
+    # on its own, with main unmoved since release-please last regenerated the
+    # branch. The job also succeeds on ordinary pull request events so that the
+    # ruleset can require it without blocking entry to the queue.
+    if: >-
+      github.event_name == 'merge_group' ||
+      (github.event_name == 'pull_request' && github.event.action != 'closed')
     runs-on: ubuntu-24.04
     permissions:
-      contents: read # read trees and compare commits
+      contents: read # read commits to compare trees
       pull-requests: read # find the open release pull request
     steps:
       - name: Guard the pinned digest against co-queued drift
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
+            if (context.eventName !== "merge_group") {
+              core.info("nothing to guard outside the merge queue");
+              return;
+            }
+
             const { owner, repo } = context.repo;
-            const headSha = context.payload.merge_group.head_sha;
+            const mergeGroup = context.payload.merge_group;
 
             const prs = await github.rest.pulls.list({
               owner,
@@ -219,113 +279,157 @@ jobs:
               core.info("no open release pull request; nothing to guard");
               return;
             }
-            const releaseHead = prs.data[0].head.sha;
+            const release = prs.data[0];
 
-            // Only guard the group that is actually merging the release.
-            const cmp = await github.rest.repos.compareCommits({
-              owner,
-              repo,
-              base: releaseHead,
-              head: headSha,
-            });
-            if (cmp.data.status !== "ahead" && cmp.data.status !== "identical") {
-              core.info("release pull request is not in this merge group");
+            // Ask the queue itself whether this merge group is the release
+            // pull request's entry. A group merges only while its entry is
+            // live, so a missing or different entry means this group does not
+            // merge the release.
+            const { repository } = await github.graphql(
+              `query ($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    mergeQueueEntry {
+                      headCommit { oid }
+                    }
+                  }
+                }
+              }`,
+              { owner, repo, number: release.number },
+            );
+            const entryHead =
+              repository.pullRequest.mergeQueueEntry?.headCommit?.oid;
+
+            if (entryHead !== mergeGroup.head_sha) {
+              core.info("this merge group does not merge the release pull request");
               return;
             }
 
-            const isBuildInput = (path) =>
-              ["Dockerfile", ".dockerignore", "deno.json", "deno.lock"]
-                .includes(path) || path.startsWith("src/");
-
-            const buildInputs = async (sha) => {
+            const tree = async (sha) => {
               const commit = await github.rest.git.getCommit({
                 owner,
                 repo,
                 commit_sha: sha,
               });
-              const tree = await github.rest.git.getTree({
-                owner,
-                repo,
-                tree_sha: commit.data.tree.sha,
-                recursive: "1",
-              });
-              if (tree.data.truncated) {
-                throw new Error("tree listing truncated; cannot verify build inputs");
-              }
-              return tree.data.tree
-                .filter((e) => e.type === "blob" && isBuildInput(e.path))
-                .map((e) => `${e.path}:${e.sha}`)
-                .sort()
-                .join("\n");
+              return commit.data.tree.sha;
             };
 
-            const merged = await buildInputs(headSha);
-            const pinned = await buildInputs(releaseHead);
+            const merging = await tree(mergeGroup.head_sha);
+            const pinned = await tree(release.head.sha);
 
-            if (merged !== pinned) {
+            if (merging !== pinned) {
               core.setFailed(
-                "a co-queued change altered the build inputs, so the pinned " +
-                  "release digest no longer describes the merging source",
+                "the merging tree differs from the release pull request's " +
+                  "tree, so the pinned digest no longer describes what " +
+                  "merges. Wait for release-please to refresh the release " +
+                  "branch, then queue it on its own.",
               );
               return;
             }
 
-            core.info("build inputs match the pinned release commit");
+            core.info("the merging tree is the tree the pin was built from");
 
   prepare:
     name: prepare
-    # Only the merged release-please pull request reaches the rest of the flow.
-    # release-please labels it "autorelease: pending", but anyone with triage
-    # access can apply labels, so the label alone does not identify it. The
-    # same-repo, author and branch checks from prepare-pin pick out the bot's
-    # release pull request and no other.
+    # Only the merged release App pull request reaches the rest of the flow.
+    # release-please applies the pending label, but the author, repository and
+    # branch checks identify the trusted pull request.
     if: >-
       github.event_name == 'pull_request' &&
       github.event.pull_request.merged == true &&
       contains(github.event.pull_request.labels.*.name, 'autorelease: pending') &&
       github.event.pull_request.head.repo.full_name == github.repository &&
-      github.event.pull_request.user.login == 'github-actions[bot]' &&
+      github.event.pull_request.user.login == 'shipperofbytes[bot]' &&
       github.event.pull_request.head.ref == 'release-please--branches--main'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
     outputs:
-      version: ${{ steps.version.outputs.version }}
-      sha: ${{ steps.version.outputs.sha }}
+      digest: ${{ steps.release.outputs.digest }}
+      image: ${{ steps.release.outputs.image }}
+      sha: ${{ steps.release.outputs.sha }}
+      version: ${{ steps.release.outputs.version }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
           persist-credentials: false
 
-      - name: Read the released version
-        id: version
+      - name: Read the release inputs
+        id: release
         env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          OWNER: ${{ github.repository_owner }}
           SHA: ${{ github.event.pull_request.merge_commit_sha }}
         run: |
           set -euo pipefail
 
           version=$(jq -r '."."' .release-please-manifest.json)
+          image="ghcr.io/${OWNER,,}/wrapscallion"
+          entry=$(yq -r '.[] | select(.id == "wrapscallion") | .entry' \
+            .pre-commit-hooks.yaml)
+          language=$(yq -r '.[] | select(.id == "wrapscallion") | .language' \
+            .pre-commit-hooks.yaml)
+          image_ref=${entry%% *}
+          digest=${image_ref#"${image}@"}
 
           if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "manifest version must be MAJOR.MINOR.PATCH, got: ${version}" >&2
             exit 1
           fi
 
-          echo "version=${version}" >> "${GITHUB_OUTPUT}"
-          echo "sha=${SHA}" >> "${GITHUB_OUTPUT}"
+          if [[ ! "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "release hook must pin ${image} by digest, got: ${entry}" >&2
+            exit 1
+          fi
+
+          expected="${image}@${digest} --output-format terminal --edit"
+          if [[ "${entry}" != "${expected}" ]]; then
+            echo "release hook entry must be '${expected}', got: ${entry}" >&2
+            exit 1
+          fi
+
+          if [[ "${language}" != "docker_image" ]]; then
+            echo "release hook language must be docker_image, got: ${language}" >&2
+            exit 1
+          fi
+
+          # The digest describes the release pull request's tree. The guard
+          # enforces this before the merge; re-check the merged result before
+          # promoting anything on the strength of the pin.
+          merged_tree=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${SHA}" \
+            --jq '.commit.tree.sha')
+          built_tree=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}" \
+            --jq '.commit.tree.sha')
+
+          if [[ "${merged_tree}" != "${built_tree}" ]]; then
+            echo "merged tree ${merged_tree} is not the release tree ${built_tree} the pin was built from" >&2
+            exit 1
+          fi
+
+          {
+            echo "digest=${digest}"
+            echo "image=${image}"
+            echo "version=${version}"
+            echo "sha=${SHA}"
+          } >> "${GITHUB_OUTPUT}"
 
   release:
     name: release
     needs: prepare
     runs-on: ubuntu-24.04
     permissions:
-      contents: write # create the draft release and upload the binaries to it
+      contents: read # check out the released source
+      packages: write # promote the candidate image to the release tags
       id-token: write # OIDC for the standalone binary attestation
       attestations: write # write the standalone binary attestation
+      artifact-metadata: write # record the attested standalone binaries
     env:
       VERSION: ${{ needs.prepare.outputs.version }}
       BASE_SHA: ${{ needs.prepare.outputs.sha }}
+      DIGEST: ${{ needs.prepare.outputs.digest }}
+      IMAGE: ${{ needs.prepare.outputs.image }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -367,22 +471,43 @@ jobs:
           (cd dist && sha256sum wrapscallion-* > SHA256SUMS)
 
       - name: Attest the standalone binaries
-        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: dist/wrapscallion-*
 
+      - id: generate-github-app-token
+        name: Generate GitHub App token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.SHIPPEROFBYTES_CLIENT_ID }}
+          private-key: ${{ secrets.SHIPPEROFBYTES_PRIVATE_KEY }}
+          permission-contents: write
+
       - name: Draft the release
+        id: draft
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
+          github-token: ${{ steps.generate-github-app-token.outputs.token }}
           script: |
             const { owner, repo } = context.repo;
             const tag = `v${process.env.VERSION}`;
 
-            // Draft it on the merge commit. A draft creates no tag; GitHub
-            // creates the tag at this commit only when a maintainer publishes
-            // -- an ancestor of main, which is how release-please finds the
-            // previous release.
-            await github.rest.repos.createRelease({
+            const releases = await github.paginate(
+              github.rest.repos.listReleases,
+              { owner, repo, per_page: 100 },
+            );
+            const existing = releases.find((release) => release.tag_name === tag);
+
+            if (existing && !existing.draft) {
+              throw new Error(`${tag} is already published`);
+            }
+
+            if (existing) {
+              core.setOutput("release-id", existing.id);
+              return;
+            }
+
+            const release = await github.rest.repos.createRelease({
               owner,
               repo,
               tag_name: tag,
@@ -392,20 +517,86 @@ jobs:
               generate_release_notes: true,
             });
 
+            core.setOutput("release-id", release.data.id);
+
       - name: Attach the standalone binaries to the draft
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.generate-github-app-token.outputs.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
           gh release upload "v${VERSION}" dist/wrapscallion-* dist/SHA256SUMS --clobber
 
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify the candidate image
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          # Any digest in the package would pass prepare's shape checks,
+          # including the unattested per-arch manifests. Promote only an index
+          # that our build workflow attested.
+          gh attestation verify "oci://${IMAGE}@${DIGEST}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --signer-workflow "${GITHUB_REPOSITORY}/.github/workflows/build.yml"
+
+      - name: Promote the release image
+        run: |
+          set -euo pipefail
+
+          IFS=. read -r major minor _ <<< "${VERSION}"
+          tags=(
+            "${IMAGE}:v${VERSION}"
+            "${IMAGE}:v${major}.${minor}"
+            "${IMAGE}:v${major}"
+            "${IMAGE}:latest"
+          )
+
+          docker buildx imagetools create \
+            "${tags[@]/#/--tag=}" \
+            "${IMAGE}@${DIGEST}"
+
+          for tag in "${tags[@]}"; do
+            published=$(docker buildx imagetools inspect "${tag}" \
+              --format '{{.Manifest.Digest}}')
+
+            if [[ "${published}" != "${DIGEST}" ]]; then
+              echo "${tag} resolved to ${published}, expected ${DIGEST}" >&2
+              exit 1
+            fi
+          done
+
+      - name: Publish the immutable release
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          RELEASE_ID: ${{ steps.draft.outputs.release-id }}
+        with:
+          github-token: ${{ steps.generate-github-app-token.outputs.token }}
+          script: |
+            const { owner, repo } = context.repo;
+
+            await github.rest.repos.updateRelease({
+              owner,
+              repo,
+              release_id: Number(process.env.RELEASE_ID),
+              draft: false,
+            });
+
   publish:
     name: publish
-    # When a maintainer publishes the draft, GitHub creates the vX.Y.Z tag and
-    # fires this event as the maintainer (not GITHUB_TOKEN), so it runs. Clearing
-    # the pending label lets release-please open the next release pull request.
+    # The App publishes the prepared draft, which creates the vX.Y.Z tag on the
+    # merge commit and fires this event. Clearing the pending label lets
+    # release-please open the next release pull request.
     if: github.event_name == 'release'
     runs-on: ubuntu-24.04
     permissions:

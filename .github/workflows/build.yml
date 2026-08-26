@@ -3,8 +3,8 @@ name: build
 # This is a reusable workflow. GitHub checks a called workflow's permissions
 # against the caller as a whole -- the union across its jobs, including ones a
 # given call skips -- so every caller grants the full set the jobs declare:
-# contents: read to build, packages: write to push, and id-token plus
-# attestations: write to attest the release index.
+# contents: read to build, packages: write to push, and id-token,
+# attestations and artifact-metadata: write to attest the release index.
 
 on:
   workflow_call:
@@ -57,6 +57,22 @@ jobs:
           ref: ${{ inputs.ref }}
           persist-credentials: false
 
+      - name: Resolve the source date epoch
+        id: epoch
+        run: |
+          set -euo pipefail
+
+          # The committer time of the commit being built, so rebuilding the
+          # same commit reproduces the same image.
+          epoch=$(git show -s --format=%ct HEAD)
+
+          if [[ ! "${epoch}" =~ ^[0-9]+$ ]]; then
+            echo "source date epoch must be a Unix timestamp, got: ${epoch}" >&2
+            exit 1
+          fi
+
+          echo "value=${epoch}" >> "${GITHUB_OUTPUT}"
+
       - name: Resolve image
         id: image
         env:
@@ -76,7 +92,7 @@ jobs:
           # Bake the release version into the image so it matches the commit the
           # release tag will point at. Nothing in the lock depends on it.
           tmp=$(mktemp)
-          jq --arg v "${VERSION}" '.version = $v' deno.json > "${tmp}"
+          jq --tab --arg v "${VERSION}" '.version = $v' deno.json > "${tmp}"
           mv "${tmp}" deno.json
 
       # Build, load and smoke-test the image. The push step below rebuilds from
@@ -85,6 +101,7 @@ jobs:
       - uses: ./.github/actions/build-image
         with:
           platform: ${{ matrix.platform }}
+          source-date-epoch: ${{ steps.epoch.outputs.value }}
 
       - name: Log in to GHCR
         if: ${{ inputs.push }}
@@ -101,9 +118,11 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
+          build-args: |
+            SOURCE_DATE_EPOCH=${{ steps.epoch.outputs.value }}
           provenance: false
           sbom: false
-          outputs: type=image,name=${{ steps.image.outputs.image }},push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=${{ steps.image.outputs.image }},push-by-digest=true,name-canonical=true,push=true,rewrite-timestamp=true
 
       - name: Export digest
         if: ${{ inputs.push }}
@@ -134,6 +153,7 @@ jobs:
       packages: write # push the assembled index
       id-token: write # OIDC for the release-index provenance attestation
       attestations: write # write the release-index provenance attestation
+      artifact-metadata: write # record the attested release index
     outputs:
       image: ${{ steps.image.outputs.image }}
       digest: ${{ steps.index.outputs.digest }}
@@ -182,7 +202,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          mapfile -t tags < <(jq -r '.tags[]' <<< "${TAGS_JSON}")
+          tag_list=$(jq -r '.tags[]' <<< "${TAGS_JSON}")
+          mapfile -t tags <<< "${tag_list}"
           sources=()
           for digest in *; do
             sources+=("${IMAGE}@sha256:${digest}")
@@ -209,7 +230,7 @@ jobs:
       # leave it empty and stay out of the public transparency log.
       - name: Attest the index
         if: ${{ inputs.version != '' }}
-        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-name: ${{ steps.image.outputs.image }}
           subject-digest: ${{ steps.index.outputs.digest }}
