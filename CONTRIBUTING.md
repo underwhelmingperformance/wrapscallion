@@ -17,6 +17,26 @@ the `check`, `actionlint`, `zizmor` and `lint` checks must pass, history stays
 linear, and commits must be signed and verified. Sign your commits and register
 the signing key with your GitHub account so they verify.
 
+## Running from a source checkout
+
+Run the command from this checkout:
+
+```sh
+deno task wrapscallion --from origin/main --to HEAD
+```
+
+Check the file passed to a Git `commit-msg` hook:
+
+```sh
+deno task wrapscallion --edit .git/COMMIT_EDITMSG
+```
+
+Build a standalone executable:
+
+```sh
+deno task build
+```
+
 ## Releasing
 
 Releases use [GitHub immutable releases][immutable], which are enabled once

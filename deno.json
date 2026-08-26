@@ -28,9 +28,10 @@
 	"tasks": {
 		"wrapscallion": "deno run --allow-read --allow-write --allow-env src/main.ts",
 		"build": "deno compile --allow-read --allow-write --allow-env --output dist/wrapscallion src/main.ts",
-		"check": "deno task check:format && deno task check:lint && deno task check:types && deno task check:test",
+		"check": "deno task \"check:*\"",
 		"check:format": "deno fmt --check",
 		"check:lint": "deno lint",
+		"check:markdown": "deno run --frozen --allow-read --allow-sys=cpus,uid,homedir npm:markdownlint-cli2@0.23.2 '**/*.md' '#CHANGELOG.md' '#node_modules/**' '#dist/**'",
 		"check:test": "deno test --ignore-env --allow-read --allow-write",
 		"check:types": "deno check src/main.ts src/*.test.ts",
 		"fix": "deno fmt"
@@ -39,30 +40,16 @@
 		"useTabs": true,
 		"singleQuote": true,
 		"proseWrap": "always",
-		"exclude": [
-			"dist",
-			"node_modules",
-			"CHANGELOG.md"
-		]
+		"exclude": ["dist", "node_modules", "CHANGELOG.md"]
 	},
 	"lint": {
-		"exclude": [
-			"dist",
-			"node_modules"
-		],
+		"exclude": ["dist", "node_modules"],
 		"rules": {
-			"tags": [
-				"recommended"
-			]
+			"tags": ["recommended"]
 		}
 	},
 	"compilerOptions": {
-		"lib": [
-			"ES2023",
-			"DOM",
-			"DOM.Iterable",
-			"deno.ns"
-		],
+		"lib": ["ES2023", "DOM", "DOM.Iterable", "deno.ns"],
 		"strict": true,
 		"noUncheckedIndexedAccess": true
 	}
