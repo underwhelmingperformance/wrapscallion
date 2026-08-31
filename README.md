@@ -35,7 +35,7 @@ default_stages:
   - pre-commit
 repos:
   - repo: https://github.com/underwhelmingperformance/wrapscallion
-    rev: v0.2.1
+    rev: v0.2.2
     hooks:
       - id: wrapscallion
 ```
@@ -55,7 +55,7 @@ default_stages:
   - pre-commit
 repos:
   - repo: https://github.com/underwhelmingperformance/wrapscallion
-    rev: v0.2.1
+    rev: v0.2.2
     hooks:
       - id: wrapscallion-system
 ```
@@ -85,12 +85,12 @@ jobs:
   lint:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v0.2.2
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: underwhelmingperformance/wrapscallion@v0.2.1
+      - uses: underwhelmingperformance/wrapscallion@v0.2.2
         with:
           ignore: |
             ^chore\(.*\): release
@@ -138,8 +138,8 @@ Prebuilt binaries are available for Linux, macOS and Windows on the
 
 ```sh
 repo=underwhelmingperformance/wrapscallion
-tag=v0.2.1
-asset=wrapscallion-0.2.1-x86_64-unknown-linux-gnu
+tag=v0.2.2
+asset=wrapscallion-0.2.2-unknown-linux-gnu
 
 gh release download "${tag}" \
   --repo "${repo}" \
@@ -170,7 +170,7 @@ tag and verify that our build workflow attested it:
 
 ```sh
 repo=underwhelmingperformance/wrapscallion
-tag=v0.2.1
+tag=v0.2.2
 image="$(
   gh api \
     --header 'Accept: application/vnd.github.raw+json' \
