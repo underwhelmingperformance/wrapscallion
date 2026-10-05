@@ -51,7 +51,7 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.user.login == 'shipperofbytes[bot]' &&
       github.event.pull_request.head.ref == 'release-please--branches--main'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     outputs:
@@ -122,7 +122,7 @@ jobs:
   pin-commit:
     name: pin commit
     needs: [prepare-pin, pin-build]
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read # check out the release branch
     env:
@@ -252,7 +252,7 @@ jobs:
     if: >-
       github.event_name == 'merge_group' ||
       (github.event_name == 'pull_request' && github.event.action != 'closed')
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read # read commits to compare trees
       pull-requests: read # find the open release pull request
@@ -341,7 +341,7 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository &&
       github.event.pull_request.user.login == 'shipperofbytes[bot]' &&
       github.event.pull_request.head.ref == 'release-please--branches--main'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     outputs:
@@ -418,7 +418,7 @@ jobs:
   release:
     name: release
     needs: prepare
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read # check out the released source
       packages: write # promote the candidate image to the release tags
@@ -598,7 +598,7 @@ jobs:
     # merge commit and fires this event. Clearing the pending label lets
     # release-please open the next release pull request.
     if: github.event_name == 'release'
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       issues: write # ensure the autorelease label exists
       pull-requests: write # mark the release pull request as tagged
