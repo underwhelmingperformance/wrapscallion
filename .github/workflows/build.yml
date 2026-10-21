@@ -147,7 +147,7 @@ jobs:
     name: merge
     if: ${{ inputs.push }}
     needs: build
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read # read the per-arch digest artifacts from this run
       packages: write # push the assembled index
