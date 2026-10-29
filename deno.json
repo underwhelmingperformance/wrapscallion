@@ -9,7 +9,7 @@
 		"@commitlint/config-conventional": "npm:@commitlint/config-conventional@21.2.4",
 		"@commitlint/lint": "npm:@commitlint/lint@21.2.4",
 		"@cto.af/linewrap": "npm:@cto.af/linewrap@4.0.1",
-		"@cto.af/string-width": "npm:@cto.af/string-width@5.0.1",
+		"@cto.af/string-width": "npm:@cto.af/string-width@6.0.0",
 		"@std/assert": "jsr:@std/assert@1.0.19",
 		"@std/cli/unstable-spinner": "jsr:@std/cli@1.0.30/unstable-spinner",
 		"@std/toml": "jsr:@std/toml@1.0.11",

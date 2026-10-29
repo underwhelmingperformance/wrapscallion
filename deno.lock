@@ -9,7 +9,7 @@
     "npm:@commitlint/config-conventional@21.2.4": "21.2.4",
     "npm:@commitlint/lint@21.2.4": "21.2.4",
     "npm:@cto.af/linewrap@4.0.1": "4.0.1",
-    "npm:@cto.af/string-width@5.0.1": "5.0.1",
+    "npm:@cto.af/string-width@6.0.0": "6.0.0",
     "npm:commander@15.0.0": "15.0.0",
     "npm:conventional-changelog-conventionalcommits@10.2.0": "10.2.0",
     "npm:diff@9.0.0": "9.0.0",
@@ -111,22 +111,36 @@
     "@cto.af/linebreak@4.0.3": {
       "integrity": "sha512-GiyepYtGQMo4LDynuhyFr0/hBGv0SFNVKnPjHuhFMnkseCBCIMecaCkKL8V3cu9mRas1djpSWznxigw/irV5Lw==",
       "dependencies": [
-        "@cto.af/unicode-trie-runtime"
+        "@cto.af/unicode-trie-runtime@3.2.9"
       ]
     },
     "@cto.af/linewrap@4.0.1": {
       "integrity": "sha512-VFQa6Q/ZKzFvPho767zBnVLWVayfGTeqi5vBxl1xaTK4Aa5/PIhfEN9CI24v1O6+Ao1sbzBojMHL1LTNuJ1/OA==",
       "dependencies": [
         "@cto.af/linebreak",
-        "@cto.af/string-width"
+        "@cto.af/string-width@5.0.1"
       ]
     },
     "@cto.af/string-width@5.0.1": {
       "integrity": "sha512-VvKKEQJPvZ5cI40l7hzmhVehG6m2oSoKHYo+O/DxS3oIeyTcFlFdvMlxLetRmNTchuxwxlCTPft/APCPW8Z/mQ==",
       "dependencies": [
-        "@cto.af/unicode-trie-runtime",
-        "ansi-regex",
-        "emoji-regex"
+        "@cto.af/unicode-trie-runtime@3.2.9",
+        "ansi-regex@6.2.2",
+        "emoji-regex@10.6.0"
+      ]
+    },
+    "@cto.af/string-width@6.0.0": {
+      "integrity": "sha512-uk0M14Ziiz+WrbDX6Za/YUAWjM043raDXG5vBtSUp5q1I5MaksoJSsOVrFYCfspxVn9gBZhFGB8lhDunOdYv1A==",
+      "dependencies": [
+        "@cto.af/unicode-trie-runtime@3.2.11",
+        "ansi-regex@6.4.0",
+        "emoji-regex@11.0.0"
+      ]
+    },
+    "@cto.af/unicode-trie-runtime@3.2.11": {
+      "integrity": "sha512-0L7Mcw8xX4IRVjGFal+Qn/tH0aXlXGXTFsvVyAM+XelZbSkcPImPQjz8Cazup+hlrx/3RPhnHbxnMSm90tp8wg==",
+      "dependencies": [
+        "fflate"
       ]
     },
     "@cto.af/unicode-trie-runtime@3.2.9": {
@@ -175,6 +189,9 @@
     },
     "ansi-regex@6.2.2": {
       "integrity": "sha512-Bq3SmSpyFHaWjPk8If9yc6svM8c56dB5BAtW4Qbw5jHTwwXXcTLoRMkpDJp6VL0XzlWaCHTXrkFURMYmD0sLqg=="
+    },
+    "ansi-regex@6.4.0": {
+      "integrity": "sha512-KzTVk2tCWAHtYrvvvaP8bJKJq2pVinhLcGEQdtLIYPbmNGNyYe8QwNaTUYQp2J7/vIsUKt5QCqAfUkYyG9DkOw=="
     },
     "argparse@2.0.1": {
       "integrity": "sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q=="
@@ -249,6 +266,9 @@
     },
     "emoji-regex@10.6.0": {
       "integrity": "sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A=="
+    },
+    "emoji-regex@11.0.0": {
+      "integrity": "sha512-2qQtc7syPcJmvF7BfKxBvwgvhzDth6u3q23+Jr4JOQUcmMGgmj7B4/ePZ2DmOhrrb77S8kMNHq2kilVASysfqA=="
     },
     "entities@4.5.0": {
       "integrity": "sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw=="
@@ -760,7 +780,7 @@
     "strip-ansi@7.2.0": {
       "integrity": "sha512-yDPMNjp4WyfYBkHnjIRLfca1i6KMyGCtsVgoKe/z1+6vukgaENdgGBZt+ZmKPc4gavvEZ5OgHfHdrazhgNyG7w==",
       "dependencies": [
-        "ansi-regex"
+        "ansi-regex@6.4.0"
       ]
     },
     "to-regex-range@5.0.1": {
@@ -784,7 +804,7 @@
       "npm:@commitlint/config-conventional@21.2.4",
       "npm:@commitlint/lint@21.2.4",
       "npm:@cto.af/linewrap@4.0.1",
-      "npm:@cto.af/string-width@5.0.1",
+      "npm:@cto.af/string-width@6.0.0",
       "npm:commander@15.0.0",
       "npm:conventional-changelog-conventionalcommits@10.2.0",
       "npm:diff@9.0.0",
