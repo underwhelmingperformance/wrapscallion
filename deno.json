@@ -22,7 +22,7 @@
 		"micromark": "npm:micromark@4.0.2",
 		"micromark-extension-gfm": "npm:micromark-extension-gfm@3.0.0",
 		"picocolors": "npm:picocolors@1.1.1",
-		"re2js": "npm:re2js@2.8.3"
+		"re2js": "npm:re2js@2.8.7"
 	},
 	"nodeModulesDir": "auto",
 	"tasks": {
