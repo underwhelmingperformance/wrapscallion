@@ -58,7 +58,7 @@ jobs:
       pinned: ${{ steps.release.outputs.pinned }}
       version: ${{ steps.release.outputs.version }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           # The pin detection below diffs HEAD against its parent.
@@ -132,7 +132,7 @@ jobs:
       SHA: ${{ github.event.pull_request.head.sha }}
       VERSION: ${{ needs.prepare-pin.outputs.version }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Check out the branch commit that requested the build. The API update
           # below refuses to overwrite a newer release-please update.
@@ -182,7 +182,7 @@ jobs:
       - id: generate-github-app-token
         if: ${{ steps.pin.outputs.changed == 'true' }}
         name: Generate GitHub App token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
         with:
           client-id: ${{ secrets.SHIPPEROFBYTES_CLIENT_ID }}
           private-key: ${{ secrets.SHIPPEROFBYTES_PRIVATE_KEY }}
@@ -350,7 +350,7 @@ jobs:
       sha: ${{ steps.release.outputs.sha }}
       version: ${{ steps.release.outputs.version }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.merge_commit_sha }}
           persist-credentials: false
@@ -431,7 +431,7 @@ jobs:
       DIGEST: ${{ needs.prepare.outputs.digest }}
       IMAGE: ${{ needs.prepare.outputs.image }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.prepare.outputs.sha }}
           persist-credentials: false
@@ -477,7 +477,7 @@ jobs:
 
       - id: generate-github-app-token
         name: Generate GitHub App token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        uses: actions/create-github-app-token@f418cff399f7aef4c2f0ad47e25ca7a6abbdd6fc # v3.4.0
         with:
           client-id: ${{ secrets.SHIPPEROFBYTES_CLIENT_ID }}
           private-key: ${{ secrets.SHIPPEROFBYTES_PRIVATE_KEY }}
@@ -528,10 +528,10 @@ jobs:
 
           gh release upload "v${VERSION}" dist/wrapscallion-* dist/SHA256SUMS --clobber
 
-      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Log in to GHCR
-        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
