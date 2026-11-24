@@ -18,6 +18,7 @@
 		"diff": "npm:diff@9.0.0",
 		"just-git": "npm:just-git@1.8.0",
 		"markdownlint": "npm:markdownlint@0.40.0",
+		"markdownlint-cli2": "npm:markdownlint-cli2@0.23.2",
 		"micromark": "npm:micromark@4.0.2",
 		"micromark-extension-gfm": "npm:micromark-extension-gfm@3.0.0",
 		"picocolors": "npm:picocolors@1.1.1",
@@ -30,7 +31,7 @@
 		"check": "deno task \"check:*\"",
 		"check:format": "deno fmt --check",
 		"check:lint": "deno lint",
-		"check:markdown": "deno run --frozen --allow-read --allow-sys=cpus,uid,homedir npm:markdownlint-cli2@0.23.2 '**/*.md' '#CHANGELOG.md' '#node_modules/**' '#dist/**'",
+		"check:markdown": "deno run --frozen --allow-read --allow-sys=cpus,uid,homedir markdownlint-cli2 '**/*.md' '#CHANGELOG.md' '#node_modules/**' '#dist/**'",
 		"check:test": "deno test --ignore-env --allow-read --allow-write",
 		"check:types": "deno check src/main.ts src/*.test.ts",
 		"fix": "deno fmt"
