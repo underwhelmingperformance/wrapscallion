@@ -113,7 +113,7 @@ jobs:
     # Publish the index now, under a candidate pr-<number> tag, so the digest the
     # pin records is a real, pullable, attested image. The release applies the
     # semver tags to this same digest once it is on main.
-    uses: ./.github/workflows/build.yml
+    uses: $/.github/workflows/build.yml
     with:
       push: true
       ref: ${{ github.event.pull_request.head.sha }}

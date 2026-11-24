@@ -2,3 +2,19 @@ self-hosted-runner:
   labels:
     - ubuntu-26.04
     - ubuntu-26.04-arm
+
+# Remove these overrides when actionlint supports GitHub's self-repository syntax.
+paths:
+  .github/workflows/build.yml:
+    ignore:
+      - '^specifying action "\$/\.github/actions/build-image" in invalid format because ref is missing\.'
+  .github/workflows/ci.yml:
+    ignore:
+      - '^specifying action "\$/\.github/actions/build-image" in invalid format because ref is missing\.'
+      - '^reusable workflow call "\$/\.github/workflows/build\.yml" at "uses" is not following the format '
+  .github/workflows/commit-messages.yml:
+    ignore:
+      - '^specifying action "\$/" in invalid format because ref is missing\.'
+  .github/workflows/release.yml:
+    ignore:
+      - '^reusable workflow call "\$/\.github/workflows/build\.yml" at "uses" is not following the format '

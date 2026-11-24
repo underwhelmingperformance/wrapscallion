@@ -54,7 +54,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: ./.github/actions/build-image
+      - uses: $/.github/actions/build-image
         with:
           platform: ${{ matrix.platform }}
 
@@ -67,6 +67,6 @@ jobs:
       id-token: write # OIDC for the release-index provenance attestation
       attestations: write # write the release-index provenance attestation
       artifact-metadata: write # record the attested release index
-    uses: ./.github/workflows/build.yml
+    uses: $/.github/workflows/build.yml
     with:
       push: true

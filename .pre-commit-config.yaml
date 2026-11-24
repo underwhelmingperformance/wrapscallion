@@ -36,7 +36,7 @@ repos:
         exclude: ^CHANGELOG\.md$
 
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
-    rev: 9257c6050c0261b8c57e712f632dc4a8010109a9 # v1.25.2
+    rev: c7d31dc612dffdd4d3b2f2b88b9660d3ab057ee8 # v1.33.1
     hooks:
       - id: zizmor
         args:
