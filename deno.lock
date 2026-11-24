@@ -2,7 +2,7 @@
   "version": "5",
   "specifiers": {
     "jsr:@std/assert@1.0.19": "1.0.19",
-    "jsr:@std/cli@1.0.30": "1.0.30",
+    "jsr:@std/cli@1.0.32": "1.0.32",
     "jsr:@std/collections@^1.1.3": "1.4.0",
     "jsr:@std/internal@^1.0.12": "1.0.14",
     "jsr:@std/toml@1.0.11": "1.0.11",
@@ -10,16 +10,16 @@
     "npm:@commitlint/lint@21.2.4": "21.2.4",
     "npm:@cto.af/linewrap@5.0.1": "5.0.1",
     "npm:@cto.af/string-width@6.0.1": "6.0.1",
-    "npm:commander@15.0.0": "15.0.0",
-    "npm:conventional-changelog-conventionalcommits@10.2.0": "10.2.0",
+    "npm:commander@15.1.0": "15.1.0",
+    "npm:conventional-changelog-conventionalcommits@10.4.1": "10.4.1",
     "npm:diff@9.0.0": "9.0.0",
-    "npm:just-git@1.8.0": "1.8.0",
-    "npm:markdownlint-cli2@0.23.2": "0.23.2",
-    "npm:markdownlint@0.40.0": "0.40.0",
+    "npm:just-git@1.10.0": "1.10.0",
+    "npm:markdownlint-cli2@0.24.2": "0.24.2",
+    "npm:markdownlint@0.42.2": "0.42.2",
     "npm:micromark-extension-gfm@3.0.0": "3.0.0",
-    "npm:micromark@4.0.2": "4.0.2",
+    "npm:micromark@4.0.3": "4.0.3",
     "npm:picocolors@1.1.1": "1.1.1",
-    "npm:re2js@2.8.7": "2.8.7"
+    "npm:re2js@2.10.0": "2.10.0"
   },
   "jsr": {
     "@std/assert@1.0.19": {
@@ -28,8 +28,8 @@
         "jsr:@std/internal"
       ]
     },
-    "@std/cli@1.0.30": {
-      "integrity": "769446536522d0417d7127ebcabcafac1ab0ce6766d0eb3fca1d36326fe98d13"
+    "@std/cli@1.0.32": {
+      "integrity": "188b3a100d6202d64e3f5bd3d799c7fa4f6d77f92cc65eb7f641c1fa0aa92a66"
     },
     "@std/collections@1.4.0": {
       "integrity": "bd7f74966e11de11b1f0420b7e8cb7bb381d8af7872b738443b92050db28c9c0"
@@ -176,8 +176,8 @@
     "ansi-regex@6.5.0": {
       "integrity": "sha512-zhvbbbdt1kbw7EJ9OQoxmQcuaNR9P5kTj7e/YdmOSU10aHWbycofJxA6jKfoEy3vlLdctOF9ZHaxLtmSm998wQ=="
     },
-    "argparse@2.0.1": {
-      "integrity": "sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q=="
+    "argparse@3.0.4": {
+      "integrity": "sha512-fwWK3Zq22l4XJJjx5mcBHGikIk+hJqO+32dPm0Jur7+rtG5x1scOjSfdT9ZKeWHPpsya/l0HHK4tDImBkTrtvA=="
     },
     "argue-cli@3.2.0": {
       "integrity": "sha512-VipTB0gXgGIFO2Rg9yEVN5wLt2AurJcZqDbgmYSwPwsykhLrQhs240/bfceev4w68lI8JshoOJIk9uW7tFzROw=="
@@ -197,8 +197,8 @@
     "character-reference-invalid@2.0.1": {
       "integrity": "sha512-iBZ4F4wRbyORVsu0jPV7gXkOsGYjGHPmAyv+HiHG8gi5PtC9KI2j1+v8/tlibRvjoWX027ypmG/n0HtO5t7unw=="
     },
-    "commander@15.0.0": {
-      "integrity": "sha512-z67u4ZhzCL/Tydu1lJARtEZYWbWaN7oYLHbsuzocr6y4N6WZAagG3RQ4FW61V1/0+jImpj293XfrcYnd1qxtPg=="
+    "commander@15.1.0": {
+      "integrity": "sha512-cgnQ88TRrWcC7pVq46RzJVRMktu3W2RcbnoidnfBsl1bmDCBwJS/udcIZpKoCrbAYYaCqsz1yZCVIgbIaU3ddQ=="
     },
     "commander@8.3.0": {
       "integrity": "sha512-OkTL9umf+He2DZkUq8f8J9of7yL6RJKI24dVITBmNfZBmri9zYZQrKkuXiKhyfPSu8tUhnVBB1iKXevvnlR4Ww=="
@@ -209,8 +209,8 @@
         "@conventional-changelog/template"
       ]
     },
-    "conventional-changelog-conventionalcommits@10.2.0": {
-      "integrity": "sha512-UtlM9GqolY7OmlQh5L/UEVoKsTUpTgUVy1PU8JN5gl5Ydaejb7WRklGliG1SKPxxj7hzA173eG3Kt5fYWE2pmg==",
+    "conventional-changelog-conventionalcommits@10.4.1": {
+      "integrity": "sha512-jS1LRFSbRoAr6JbhhRy1JYfNNUj5LM3+v49hRE03CgccsiYqgdVj/RTmrw4J1rylrqijHwdOlJWiJa61JHOgHg==",
       "dependencies": [
         "@conventional-changelog/template"
       ]
@@ -250,8 +250,8 @@
     "emoji-regex@11.0.0": {
       "integrity": "sha512-2qQtc7syPcJmvF7BfKxBvwgvhzDth6u3q23+Jr4JOQUcmMGgmj7B4/ePZ2DmOhrrb77S8kMNHq2kilVASysfqA=="
     },
-    "entities@4.5.0": {
-      "integrity": "sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw=="
+    "entities@8.1.0": {
+      "integrity": "sha512-kxL7msIffSuh9aaFAMD7rxAIuTRMAHMeBtgHW2yUdWw732ZNh4MehkF2gdjvtdmikkaIP9bFDDJOPlsvm7avrA=="
     },
     "es-toolkit@1.53.2": {
       "integrity": "sha512-iUqZ+NlwH4jUgRmXZUxFBsV/9762TQEa1O4IXLFBmDEjVHScBytKuseX23I0+v9ShZ5MYxEx6WKNzm6IPnex8g=="
@@ -290,13 +290,14 @@
         "is-glob"
       ]
     },
-    "globby@16.2.2": {
-      "integrity": "sha512-NLvV9ubZ6NDsJaOpKPy3cQeJpKi9DcWiyCiFUpJPA0YihRqiE6RWaLUmgNNPr8MgPpLZjnBjSmou7uZBRJv9wA==",
+    "globby@16.2.4": {
+      "integrity": "sha512-c8B/VNLmxRcmqqenRA9t+9IyOjf9+V6lTxPaUJLqOCONdQkWZ0ETYgX0qbtJqPsgCNusT9MZ5Jeidw8Eb9tn2g==",
       "dependencies": [
         "@sindresorhus/merge-streams",
         "fast-glob",
         "ignore",
         "is-path-inside",
+        "micromatch",
         "slash",
         "unicorn-magic"
       ]
@@ -335,8 +336,8 @@
     "is-path-inside@4.0.0": {
       "integrity": "sha512-lJJV/5dYS+RcL8uQdBDW9c9uWFLLBNRyFhnAKXw5tVqLlKZ4RMGZKv+YQ/IA3OhD+RpbJa1LLFM1FQPGyIXvOA=="
     },
-    "js-yaml@5.2.2": {
-      "integrity": "sha512-dayzUzKkJ1MkuUtZglSebU43utNXH0OWQByK9rKOOuYIO8M5TV1y+n8ALMdG0rdzBnfNkOmZEqrURepb0ejqBw==",
+    "js-yaml@5.5.0": {
+      "integrity": "sha512-paNr4LFIFPjeeSmwNYdrb8FafLLG/Cr2Af3GjbsHJ5CxIjH4r0c2emlmRdAtpPAieP1gRVzk6buBbVP5gBMGAg==",
       "dependencies": [
         "argparse"
       ],
@@ -348,8 +349,8 @@
     "jsonpointer@5.0.1": {
       "integrity": "sha512-p/nXbhSEcu3pZRdkW1OfJhpsVtW1gd4Wa1fnQc9YLiTfAjn0312eMKimbdIQzuZl9aa9xUGaRlP9T/CJE/ditQ=="
     },
-    "just-git@1.8.0": {
-      "integrity": "sha512-c/F42fi9Kq7fhlGGENzVpMGFmjN9WJMrp6SuTMyGnllsrLDUNUCh4K5RdTPAjiRe+WhdCoDPpLJeK5lUY7C/dQ=="
+    "just-git@1.10.0": {
+      "integrity": "sha512-YsQAKD/4DRMI1a4y8q2Q0yYbO+PdgQDgRDexdAysMkQrZm0SEMB8/fEK2CsJn3IA4VK5TqGxPmKc3xZOncBvrg=="
     },
     "katex@0.16.47": {
       "integrity": "sha512-Eeo8Ys1doU1z+x8AZsPpQu+p/QcZBI5PeOo7QGQdy2x2m0MU/hYagBbGOmXwr5KVbEfVuWv9LpnQWeehogurjg==",
@@ -358,14 +359,14 @@
       ],
       "bin": true
     },
-    "linkify-it@5.0.2": {
-      "integrity": "sha512-ONTm2jCMAVZjgQa/Fy1kScXsuOoF5NPTsoFBdE1KVIZ2vAh/r9+Bqo+0jINCBYnavTPQZz38QzFTme79ENoN3Q==",
+    "linkify-it@6.1.0": {
+      "integrity": "sha512-wJ/TwpSDTLepCrQoYWYIExIKg5Zchex2Nn5yk2mFnB+6PtdkHtyLx742md9csRjjOnGkKIS/RrbY7l8D6gT9Vw==",
       "dependencies": [
         "uc.micro"
       ]
     },
-    "markdown-it@14.3.0": {
-      "integrity": "sha512-RCEsPjR+sr0x+AuYp601tKTkgFG4YEPLCzHST3cQ/fhlJkqAkz1L2/Qbp1j9qw5SBwQHFBoW8+hoN5xssOF0Tw==",
+    "markdown-it@15.0.3": {
+      "integrity": "sha512-+Az7Ojz3iRGu8KYMvJ6xVhvrxP3eE+vEtJX75Ow88XBpcQNV/0lGX5ZynIIBftREo4DC2jsveAMDaeltmm8QvQ==",
       "dependencies": [
         "argparse",
         "entities",
@@ -376,29 +377,29 @@
       ],
       "bin": true
     },
-    "markdownlint-cli2-formatter-default@0.0.6_markdownlint-cli2@0.23.2": {
+    "markdownlint-cli2-formatter-default@0.0.6_markdownlint-cli2@0.24.2": {
       "integrity": "sha512-VVDGKsq9sgzu378swJ0fcHfSicUnMxnL8gnLm/Q4J/xsNJ4e5bA6lvAz7PCzIl0/No0lHyaWdqVD2jotxOSFMQ==",
       "dependencies": [
         "markdownlint-cli2"
       ]
     },
-    "markdownlint-cli2@0.23.2": {
-      "integrity": "sha512-eUhcnkSpzURo/o4htSqc7LPDszgOOTknhU4eY/sPHvMCLxnTCYscv1gw1/js/idmaZPisv9ECVEIORcllqjTUw==",
+    "markdownlint-cli2@0.24.2": {
+      "integrity": "sha512-bgxzhJkgR7t2puRgePHZYVqKzC90etPzxOC+9ZNATjAVJB2zs7EAolfF1inVsrkgYN+ykVIHIxk0WypG2VVLZA==",
       "dependencies": [
         "globby",
         "js-yaml",
         "jsonc-parser",
         "jsonpointer",
         "markdown-it",
-        "markdownlint@0.41.1",
+        "markdownlint",
         "markdownlint-cli2-formatter-default",
         "micromatch",
         "smol-toml"
       ],
       "bin": true
     },
-    "markdownlint@0.40.0": {
-      "integrity": "sha512-UKybllYNheWac61Ia7T6fzuQNDZimFIpCg2w6hHjgV1Qu0w1TV0LlSgryUGzM0bkKQCBhy2FDhEELB73Kb0kAg==",
+    "markdownlint@0.42.2": {
+      "integrity": "sha512-IhlUBVT+kHBX+u3EjEsQdFB4q0Rl0Hx+JsGsvVkonNut1/n8Kv8yXzwk0pazC9uF35JlwMZ+LxV4CQ9YNAbG8w==",
       "dependencies": [
         "micromark",
         "micromark-core-commonmark",
@@ -408,21 +409,8 @@
         "micromark-extension-gfm-table",
         "micromark-extension-math",
         "micromark-util-types",
-        "string-width@8.1.0"
-      ]
-    },
-    "markdownlint@0.41.1": {
-      "integrity": "sha512-qHKeU2E1bdyNAT077go2FVTNXvYcktN5IHtF6XyeD1l0PClxzSp2tUApAV14ORI8DGX4H9bNKZEzelZp4qn8IA==",
-      "dependencies": [
-        "micromark",
-        "micromark-core-commonmark",
-        "micromark-extension-directive",
-        "micromark-extension-gfm-autolink-literal",
-        "micromark-extension-gfm-footnote",
-        "micromark-extension-gfm-table",
-        "micromark-extension-math",
-        "micromark-util-types",
-        "string-width@8.2.1"
+        "re2js@2.9.1",
+        "string-width"
       ]
     },
     "mdurl@2.1.0": {
@@ -431,8 +419,8 @@
     "merge2@1.4.1": {
       "integrity": "sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg=="
     },
-    "micromark-core-commonmark@2.0.3": {
-      "integrity": "sha512-RDBrHEMSxVFLg6xvnXmb1Ayr2WzLAWjeSATAoxwKYJV94TeNavgoIdA0a9ytzDSVzBy2YKFK+emCPOEibLeCrg==",
+    "micromark-core-commonmark@2.0.4": {
+      "integrity": "sha512-wxEeE8v8XVvOrxn1TZj74qYhAtTQsSqufHVS3uNVyT1MupXxhyaHk8/9xDNPh9BmL77QNDgWTkZ3RsYHB2ry7w==",
       "dependencies": [
         "decode-named-character-reference",
         "devlop",
@@ -444,6 +432,7 @@
         "micromark-util-character",
         "micromark-util-chunked",
         "micromark-util-classify-character",
+        "micromark-util-edit-map",
         "micromark-util-html-tag-name",
         "micromark-util-normalize-identifier",
         "micromark-util-resolve-all",
@@ -497,8 +486,8 @@
         "micromark-util-types"
       ]
     },
-    "micromark-extension-gfm-table@2.1.1": {
-      "integrity": "sha512-t2OU/dXXioARrC6yWfJ4hqB7rct14e8f7m0cbI5hUmDyyIlwv5vEtooptH8INkbLzOatzKuVbQmAYcbWoyz6Dg==",
+    "micromark-extension-gfm-table@2.1.2": {
+      "integrity": "sha512-pRzm4kDTu0MjlmBkxmS9yYhw60nncfcEwu9NNdPFSQEFXS95ZKyIIyTSHu/o3ReBUrLKYEq+7YaXCRn/bPB4MA==",
       "dependencies": [
         "devlop",
         "micromark-factory-space",
@@ -624,6 +613,12 @@
         "micromark-util-symbol"
       ]
     },
+    "micromark-util-edit-map@1.0.0": {
+      "integrity": "sha512-Pa2ljlsEL6sVwFaYeyrOLSYbQt73JvGbPOYFq+9AElXiSnfI5Q4465RRZ1sHv7lDjDOnGRDDaqPXqClqWK/q1Q==",
+      "dependencies": [
+        "micromark-util-types"
+      ]
+    },
     "micromark-util-encode@2.0.1": {
       "integrity": "sha512-c3cVx2y4KqUnwopcO9b/SCdo2O67LwJJ/UyqGfbigahfegL9myoEFoDYZgkT7f36T0bLrM9hZTAaAyH+PCAXjw=="
     },
@@ -662,11 +657,11 @@
     "micromark-util-symbol@2.0.1": {
       "integrity": "sha512-vs5t8Apaud9N28kgCrRUdEed4UJ+wWNvicHLPxCa9ENlYuAY31M0ETy5y1vA33YoNPDFTghEbnh6efaE8h4x0Q=="
     },
-    "micromark-util-types@2.0.2": {
-      "integrity": "sha512-Yw0ECSpJoViF1qTU4DC6NwtC4aWGt1EkzaQB8KPPyCRR8z9TWeV0HbEFGTO+ZY1wB22zmxnJqhPyTpOVCpeHTA=="
+    "micromark-util-types@2.0.3": {
+      "integrity": "sha512-oxB2Ik03hI0gv+VNn9tnh1t1YEe9MDPptViAEgfdf3YQHsn0pzGTgCdlSCJXcwhqm8phaEuM7zeEu3QQzVBrPg=="
     },
-    "micromark@4.0.2": {
-      "integrity": "sha512-zpe98Q6kvavpCr1NPVSCMebCKfD7CA2NqZ+rykeNhONIJBpc1tFKt9hucLGwha3jNTNI8lHpctWJWoimVF4PfA==",
+    "micromark@4.0.3": {
+      "integrity": "sha512-oGYfQzHSG5dOMovQcJ3fyTmZlWAWpi0XA0sJwJs+i6OT88o1+Jtw/8z0CmdowSLxGhhFK89rQ/oXph/wN02PNw==",
       "dependencies": [
         "@types/debug",
         "debug",
@@ -678,6 +673,7 @@
         "micromark-util-chunked",
         "micromark-util-combine-extensions",
         "micromark-util-decode-numeric-character-reference",
+        "micromark-util-edit-map",
         "micromark-util-encode",
         "micromark-util-normalize-identifier",
         "micromark-util-resolve-all",
@@ -721,8 +717,11 @@
     "queue-microtask@1.2.3": {
       "integrity": "sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A=="
     },
-    "re2js@2.8.7": {
-      "integrity": "sha512-bRSL/vn3KAmlGfGNoVpcsBXLaVvl6AbuvMMWbz0m3vBj60nj+p2/biozfBUOSBP+5XTduF6mr6IO/ZVjmqqkVQ=="
+    "re2js@2.10.0": {
+      "integrity": "sha512-/P6FNnLbHjXJMRF1dPoZoVTyHvFcuVhbDpzml9DPMlbeErYlZ18GueAaG9GhYhAm/9AN7i7Y6crmDrLX0DeJ4Q=="
+    },
+    "re2js@2.9.1": {
+      "integrity": "sha512-JIT3bEEUZTOR2YS1walNEIfH4cF/cQeZcBUFq7ldqO6lR6g0X5CBq/S8rsa9omzZcsNf8qc36jCkWpKKtncrZg=="
     },
     "reusify@1.1.0": {
       "integrity": "sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw=="
@@ -740,18 +739,11 @@
     "slash@5.1.0": {
       "integrity": "sha512-ZA6oR3T/pEyuqwMgAKT0/hAv8oAXckzbkmR0UkUosQ+Mc4RxGoJkRmwHgHufaenlyAgE1Mxgpdcrf75y6XcnDg=="
     },
-    "smol-toml@1.7.0": {
-      "integrity": "sha512-aqVvWoyO21L23mb+drl4RmMXbf6N7FdHjAhTRA9ZBL7apWBgfWC16KjrASI+1p9GAroljyMHj6fK67i0UiTNvQ=="
+    "smol-toml@1.9.1": {
+      "integrity": "sha512-j7WyPdf0CJoutMzMoPLF/bVXHtKZIT9Rb4eGeEbWw8X2t5oirjPgpL+OpaENZrILYaXqYwnVH+qgUwVbl+pUJQ=="
     },
-    "string-width@8.1.0": {
-      "integrity": "sha512-Kxl3KJGb/gxkaUMOjRsQ8IrXiGW75O4E3RPjFIINOVH8AMl2SQ/yWdTzWwF3FevIX9LcMAjJW+GRwAlAbTSXdg==",
-      "dependencies": [
-        "get-east-asian-width",
-        "strip-ansi"
-      ]
-    },
-    "string-width@8.2.1": {
-      "integrity": "sha512-IIaP0g3iy9Cyy18w3M9YcaDudujEAVHKt3a3QJg1+sr/oX96TbaGUubG0hJyCjCBThFH+tFpcIyoUHUn1ogaLA==",
+    "string-width@8.3.0": {
+      "integrity": "sha512-ZbmZM0JCihQN91dWnxoipT2KOEyHqEyfRXUyjuRhW8b/xnqPDoq4gWEVApTVa9db2wN8mmoikgFBbjh71+cGeQ==",
       "dependencies": [
         "get-east-asian-width",
         "strip-ansi"
@@ -769,8 +761,8 @@
         "is-number"
       ]
     },
-    "uc.micro@2.1.0": {
-      "integrity": "sha512-ARDJmphmdvUk6Glw7y9DQ2bFkKBHwQHLi2lsaH6PPmz/Ka9sFOBsBluozhDltWmnv9u/cF6Rt87znRTPV+yp/A=="
+    "uc.micro@3.0.0": {
+      "integrity": "sha512-U3PppEkleoTnIfi8BozMx3yju3qc/L6SwqWo2Sw+54PX+PX0q9I+r1Um5HCmqD7n9VDX5/v3vQH/AjA6deDdtw=="
     },
     "unicorn-magic@0.4.1": {
       "integrity": "sha512-lzlXPoVB0Uy/FvTaUgX39RbixYiSKoc3JSoSf01+0c2B6FR3qdYIPN7Qjo/AV7n6sqLCk0509cT3LRj1oSZ1+A=="
@@ -779,22 +771,22 @@
   "workspace": {
     "dependencies": [
       "jsr:@std/assert@1.0.19",
-      "jsr:@std/cli@1.0.30",
+      "jsr:@std/cli@1.0.32",
       "jsr:@std/toml@1.0.11",
       "npm:@commitlint/config-conventional@21.2.4",
       "npm:@commitlint/lint@21.2.4",
       "npm:@cto.af/linewrap@5.0.1",
       "npm:@cto.af/string-width@6.0.1",
-      "npm:commander@15.0.0",
-      "npm:conventional-changelog-conventionalcommits@10.2.0",
+      "npm:commander@15.1.0",
+      "npm:conventional-changelog-conventionalcommits@10.4.1",
       "npm:diff@9.0.0",
-      "npm:just-git@1.8.0",
-      "npm:markdownlint-cli2@0.23.2",
-      "npm:markdownlint@0.40.0",
+      "npm:just-git@1.10.0",
+      "npm:markdownlint-cli2@0.24.2",
+      "npm:markdownlint@0.42.2",
       "npm:micromark-extension-gfm@3.0.0",
-      "npm:micromark@4.0.2",
+      "npm:micromark@4.0.3",
       "npm:picocolors@1.1.1",
-      "npm:re2js@2.8.7"
+      "npm:re2js@2.10.0"
     ]
   }
 }
