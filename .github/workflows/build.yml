@@ -98,7 +98,7 @@ jobs:
       # Build, load and smoke-test the image. The push step below rebuilds from
       # the same context and hits the buildx cache, so this does not double the
       # work.
-      - uses: ./.github/actions/build-image
+      - uses: $/.github/actions/build-image
         with:
           platform: ${{ matrix.platform }}
           source-date-epoch: ${{ steps.epoch.outputs.value }}

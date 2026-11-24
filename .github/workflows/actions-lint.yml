@@ -45,4 +45,4 @@ jobs:
           advanced-security: false
           annotations: true
           persona: pedantic
-          version: 1.29.0
+          version: 1.33.1
