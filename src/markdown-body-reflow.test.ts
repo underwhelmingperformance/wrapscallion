@@ -186,6 +186,17 @@ Deno.test('MarkdownBodyReflower wraps plain prose to 72 columns', () => {
 	);
 });
 
+Deno.test('MarkdownBodyReflower wraps wide emoji in prose and inline code', () => {
+	const prose = 'A'.repeat(70);
+	const inline = 'A'.repeat(68);
+	const inputs = [`${prose} 🫝`, `${inline} \`🫝\``];
+
+	assertEquals(inputs.map((input) => reflower.reflow(input).reflowed), [
+		`${prose}\n🫝`,
+		`${inline}\n\`🫝\``,
+	]);
+});
+
 Deno.test('MarkdownBodyReflower does not rewrite Markdown tables or code fences', () => {
 	const body = [
 		'| Column | Description |',
